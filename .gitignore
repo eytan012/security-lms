@@ -13,10 +13,43 @@
 
 # misc
 .DS_Store
+.env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+security-lms-firebase-adminsdk-fbsvc-02bed226be.json
+serviceAccountKey.json
+
+# Firebase config and keys
+firebase-config.json
+firebase-debug.log
+firebase-debug.*.log
+.firebase/
+*firebase-adminsdk*.json
+*serviceAccount*.json
+
+# Environment files
+.env.*
+!.env.example
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+*.pem
+
+# Debug logs
+debug.log
+*-debug.log
+*-error.log
+
+# Local SSL certificates
+*.key
+*.crt
+*.pem
 
 npm-debug.log*
 yarn-debug.log*

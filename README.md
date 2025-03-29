@@ -1,14 +1,93 @@
-# Getting Started with Create React App
+# Security LMS - מערכת למידה לאבטחת מידע
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+מערכת למידה מקוונת המתמקדת באבטחת מידע ומודעות לסייבר.
 
-## Available Scripts
+## התקנה
 
-In the project directory, you can run:
+1. התקן את Node.js (גרסה 14 ומעלה)
+2. שכפל את המאגר:
+   ```bash
+   git clone https://github.com/your-username/security-lms.git
+   cd security-lms
+   ```
+3. התקן את התלויות:
+   ```bash
+   npm install
+   ```
+4. צור קובץ `.env` בתיקיית הפרויקט והוסף את המשתנים הבאים:
+   ```
+   REACT_APP_FIREBASE_API_KEY=your-api-key
+   REACT_APP_FIREBASE_AUTH_DOMAIN=your-auth-domain
+   REACT_APP_FIREBASE_PROJECT_ID=your-project-id
+   REACT_APP_FIREBASE_STORAGE_BUCKET=your-storage-bucket
+   REACT_APP_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
+   REACT_APP_FIREBASE_APP_ID=your-app-id
+   REACT_APP_FIREBASE_MEASUREMENT_ID=your-measurement-id
+   ```
+5. הרץ את האפליקציה במצב פיתוח:
+   ```bash
+   npm start
+   ```
 
-### `npm start`
+## פריסה לFirebase
 
-Runs the app in the development mode.\
+1. התקן את Firebase CLI:
+   ```bash
+   npm install -g firebase-tools
+   ```
+
+2. התחבר לFirebase:
+   ```bash
+   firebase login
+   ```
+
+3. אתחל את הפרויקט:
+   ```bash
+   firebase init
+   ```
+   - בחר Hosting
+   - בחר את הפרויקט שלך
+   - הגדר את תיקיית `build` כתיקיית הפריסה
+   - הגדר SPA כ-true
+   - אל תדרוס את index.html
+
+4. בנה את האפליקציה:
+   ```bash
+   npm run build
+   ```
+
+5. פרוס את האפליקציה:
+   ```bash
+   firebase deploy
+   ```
+
+## תחזוקה
+
+1. העלאה לגיט:
+   ```bash
+   git add .
+   git commit -m "תיאור השינויים"
+   git push origin main
+   ```
+
+2. עדכון גרסה:
+   ```bash
+   npm version patch
+   git push && git push --tags
+   ```
+
+## מבנה הפרויקט
+
+```
+src/
+  ├── components/     # רכיבי React משותפים
+  ├── context/       # Context API
+  ├── data/         # מידע דמה וקבועים
+  ├── firebase/     # הגדרות Firebase
+  ├── hooks/        # Custom Hooks
+  ├── pages/        # דפי האפליקציה
+  └── styles/       # סגנונות CSS
+```
 Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
 
 The page will reload when you make changes.\
