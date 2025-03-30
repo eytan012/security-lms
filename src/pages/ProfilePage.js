@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   Container,
   Typography,
@@ -49,10 +49,21 @@ function ProfilePage() {
   const [editError, setEditError] = useState(null);
   const [isResetting, setIsResetting] = useState(false);
   const [resetError, setResetError] = useState(null);
+  const [departments, setDepartments] = useState([]);
   const [formData, setFormData] = useState({
-    displayName: user?.displayName || '',
+    name: user?.name || '',
     department: user?.department || ''
   });
+
+  // עדכון הטופס כשהמשתמש משתנה
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        name: user.name || '',
+        department: user.department || ''
+      });
+    }
+  }, [user]);
 
   // Handle progress reset
   const handleReset = useCallback(async () => {
@@ -93,7 +104,7 @@ function ProfilePage() {
       if (!user?.id) return;
       
       await updateUser(user.id, {
-        displayName: formData.displayName,
+        name: formData.name,
         department: formData.department
       });
       
@@ -104,6 +115,25 @@ function ProfilePage() {
       setEditError('שגיאה בשמירת הפרופיל');
     }
   };
+
+  // Fetch departments
+  const fetchDepartments = async () => {
+    try {
+      const departmentsRef = collection(db, 'departments');
+      const snapshot = await getDocs(departmentsRef);
+      const departmentsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setDepartments(departmentsData);
+    } catch (error) {
+      console.error('Error fetching departments:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchDepartments();
+  }, []);
 
   const handleInputChange = (field) => (event) => {
     setFormData(prev => ({
@@ -141,17 +171,26 @@ function ProfilePage() {
               <TextField
                 fullWidth
                 label="שם"
-                value={formData.displayName}
-                onChange={handleInputChange('displayName')}
+                value={formData.name}
+                onChange={handleInputChange('name')}
                 margin="normal"
               />
-              <TextField
-                fullWidth
-                label="מחלקה"
-                value={formData.department}
-                onChange={handleInputChange('department')}
-                margin="normal"
-              />
+              <FormControl fullWidth margin="normal">
+                <Select
+                  value={formData.department}
+                  onChange={handleInputChange('department')}
+                  displayEmpty
+                >
+                  <MenuItem value="">
+                    <em>לא משויך</em>
+                  </MenuItem>
+                  {departments.map((dept) => (
+                    <MenuItem key={dept.id} value={dept.id}>
+                      {dept.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Box>
           </DialogContent>
           <DialogActions>
@@ -183,7 +222,7 @@ function ProfilePage() {
                     <ListItemIcon>
                       <PersonIcon />
                     </ListItemIcon>
-                    <ListItemText primary="שם" secondary={user?.displayName} />
+                    <ListItemText primary="שם" secondary={user?.name} />
                   </ListItem>
                   <ListItem>
                     <ListItemIcon>
@@ -195,7 +234,10 @@ function ProfilePage() {
                     <ListItemIcon>
                       <BusinessIcon />
                     </ListItemIcon>
-                    <ListItemText primary="מחלקה" secondary={user?.department || 'לא צוין'} />
+                    <ListItemText 
+                      primary="מחלקה" 
+                      secondary={departments.find(d => d.id === user?.department)?.name || 'לא צוין'} 
+                    />
                   </ListItem>
                   <ListItem>
                     <ListItemIcon>

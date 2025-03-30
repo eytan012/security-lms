@@ -11,12 +11,15 @@ import {
 import {
   Dashboard as DashboardIcon,
   People as PeopleIcon,
-  Book as BookIcon
+  Book as BookIcon,
+  Business as BusinessIcon
 } from '@mui/icons-material';
 import { useUser } from '../context/UserContext';
 import Layout from '../components/Layout';
 import DashboardStats from '../components/admin/DashboardStats';
 import BlockManagement from '../components/admin/BlockManagement';
+import UserManagement from '../components/UserManagement';
+import DepartmentManagement from '../components/DepartmentManagement';
 
 // TabPanel component for handling tab content
 function TabPanel({ children, value, index }) {
@@ -68,6 +71,7 @@ function AdminPage() {
           >
             <Tab icon={<DashboardIcon />} label="לוח בקרה" />
             <Tab icon={<PeopleIcon />} label="ניהול משתמשים" />
+            <Tab icon={<BusinessIcon />} label="ניהול מחלקות" />
             <Tab icon={<BookIcon />} label="ניהול תוכן" />
           </Tabs>
 
@@ -81,14 +85,16 @@ function AdminPage() {
 
           {/* Users Management Tab */}
           <TabPanel value={activeTab} index={1}>
-            <Typography variant="h6" gutterBottom>
-              ניהול משתמשים
-            </Typography>
-            {/* TODO: Add Users Management components */}
+            <UserManagement />
+          </TabPanel>
+
+          {/* Departments Management Tab */}
+          <TabPanel value={activeTab} index={2}>
+            <DepartmentManagement />
           </TabPanel>
 
           {/* Content Management Tab */}
-          <TabPanel value={activeTab} index={2}>
+          <TabPanel value={activeTab} index={3}>
             <BlockManagement />
           </TabPanel>
         </Paper>
