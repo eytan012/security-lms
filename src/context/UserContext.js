@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { db } from '../firebase/config';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc, getDoc } from 'firebase/firestore';
 
 
 const UserContext = createContext();
@@ -12,6 +12,7 @@ export function UserProvider({ children }) {
   });
   const [loading, setLoading] = useState(false);
   const [userCourses, setUserCourses] = useState([]);
+  const [materialProgress, setMaterialProgress] = useState([]);
 
 
   // שמור את המשתמש ב-localStorage כשהוא משתנה
@@ -78,13 +79,18 @@ export function UserProvider({ children }) {
   const markCompleted = async (materialId) => {
     if (!user?.id || !user?.role) return false;
     try {
-      const success = await markMaterialAsCompleted(user.id, materialId);
-      if (success) {
-        // Update progress data
-        const progress = await getUserMaterialProgress(user.id);
-        setMaterialProgress(progress || []);
+      // Get the user's progress document
+      const progressRef = doc(db, 'userProgress', user.id);
+      const progressDoc = await getDoc(progressRef);
+      
+      // Create or update the progress
+      const currentProgress = progressDoc.exists() ? progressDoc.data().completedMaterials || [] : [];
+      if (!currentProgress.includes(materialId)) {
+        currentProgress.push(materialId);
+        await updateDoc(progressRef, { completedMaterials: currentProgress });
+        setMaterialProgress(currentProgress);
       }
-      return success;
+      return true;
     } catch (error) {
       console.error('Error marking material as completed:', error);
       return false;
@@ -96,7 +102,9 @@ export function UserProvider({ children }) {
     setUser,
     loading,
     setLoading,
-    userCourses
+    userCourses,
+    materialProgress,
+    markCompleted
 
   };
 
