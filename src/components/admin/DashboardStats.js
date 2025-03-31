@@ -43,7 +43,13 @@ const StatCard = ({ title, value, icon, color }) => (
 );
 
 function DashboardStats() {
-  const [stats, setStats] = useState(null);
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    studentCount: 0,
+    adminCount: 0,
+    totalBlocks: 0,
+    completionRate: 0
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -115,7 +121,7 @@ function DashboardStats() {
       <Grid item xs={12} sm={6} md={3}>
         <StatCard
           title="סה״כ משתמשים"
-          value={stats?.totalUsers || 0}
+          value={stats.totalUsers}
           icon={<PeopleIcon sx={{ color: '#2196f3' }} />}
           color="#2196f3"
         />
@@ -124,7 +130,7 @@ function DashboardStats() {
       <Grid item xs={12} sm={6} md={3}>
         <StatCard
           title="בלוקי למידה"
-          value={stats?.totalBlocks || 0}
+          value={stats.totalBlocks}
           icon={<AssignmentIcon sx={{ color: '#ff9800' }} />}
           color="#ff9800"
         />
@@ -132,7 +138,7 @@ function DashboardStats() {
       <Grid item xs={12} sm={6} md={3}>
         <StatCard
           title="אחוז השלמה"
-          value={`${stats?.completionRate || 0}%`}
+          value={`${stats.completionRate}%`}
           icon={<TimelineIcon sx={{ color: '#9c27b0' }} />}
           color="#9c27b0"
         />

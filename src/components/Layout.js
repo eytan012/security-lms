@@ -94,6 +94,8 @@ function Layout({ children }) {
                     cursor: 'pointer',
                     bgcolor: 'background.paper',
                     transition: 'all 0.2s',
+                    flexDirection: 'row-reverse',
+                    justifyContent: 'flex-start',
                     '&:hover': {
                       bgcolor: 'primary.light',
                       '& .MuiListItemIcon-root, & .MuiTypography-root': {
@@ -102,24 +104,26 @@ function Layout({ children }) {
                     },
                   }}
                 >
-                  <ListItemIcon
-                    sx={{
-                      minWidth: 40,
-                      color: 'primary.main',
-                    }}
-                  >
-                    {item.icon}
-                  </ListItemIcon>
                   <ListItemText
                     primary={item.text}
                     sx={{
                       '& .MuiTypography-root': {
                         fontSize: '1rem',
                         fontWeight: 500,
-                        color: 'text.primary'
+                        color: 'text.primary',
+                        textAlign: 'right'
                       }
                     }}
                   />
+                  <ListItemIcon
+                    sx={{
+                      minWidth: 40,
+                      color: 'primary.main',
+                      marginRight: 'auto'
+                    }}
+                  >
+                    {item.icon}
+                  </ListItemIcon>
                 </Box>
               </ListItem>
             ))}
@@ -137,6 +141,8 @@ function Layout({ children }) {
                   borderRadius: 1,
                   cursor: 'pointer',
                   bgcolor: 'error.light',
+                  flexDirection: 'row-reverse',
+                  justifyContent: 'flex-start',
                   '&:hover': {
                     bgcolor: 'error.main',
                     '& .MuiListItemIcon-root, & .MuiTypography-root': {
@@ -145,24 +151,26 @@ function Layout({ children }) {
                   },
                 }}
               >
-                <ListItemIcon
-                  sx={{
-                    minWidth: 40,
-                    color: 'white'
-                  }}
-                >
-                  <ExitToAppIcon />
-                </ListItemIcon>
                 <ListItemText
                   primary="התנתקות"
                   sx={{
                     '& .MuiTypography-root': {
                       fontSize: '1rem',
                       fontWeight: 500,
-                      color: 'white'
+                      color: 'white',
+                      textAlign: 'right'
                     }
                   }}
                 />
+                <ListItemIcon
+                  sx={{
+                    minWidth: 40,
+                    color: 'white',
+                    marginRight: 'auto'
+                  }}
+                >
+                  <ExitToAppIcon />
+                </ListItemIcon>
               </Box>
             </ListItem>
           </List>

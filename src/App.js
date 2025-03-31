@@ -85,9 +85,9 @@ function App() {
             <Route
               path="/statistics"
               element={
-                <AdminRoute>
+                <ProtectedRoute>
                   <StatisticsPage />
-                </AdminRoute>
+                </ProtectedRoute>
               }
             />
             <Route

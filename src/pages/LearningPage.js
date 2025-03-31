@@ -31,7 +31,7 @@ import { useUser } from '../context/UserContext';
 import Layout from '../components/Layout';
 import { useNavigate } from 'react-router-dom';
 
-function LMSBlocksPage() {
+function LearningPage() {
   const { user } = useUser();
   const navigate = useNavigate();
   const [blocks, setBlocks] = useState([]);
@@ -309,4 +309,4 @@ function LMSBlocksPage() {
   );
 }
 
-export default LMSBlocksPage;
+export default LearningPage;

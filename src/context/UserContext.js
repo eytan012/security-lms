@@ -5,6 +5,8 @@ import { collection, query, where, getDocs, doc, updateDoc, getDoc } from 'fireb
 
 const UserContext = createContext();
 
+export default UserContext;
+
 export function UserProvider({ children }) {
   const [user, setUser] = useState(() => {
     const savedUser = localStorage.getItem('user');

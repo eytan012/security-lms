@@ -7,15 +7,11 @@ import {
   Button,
   LinearProgress,
   Alert,
+  Rating,
+  TextField,
   Card,
   CardContent,
-  Divider,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Rating
+  Divider
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
@@ -27,8 +23,9 @@ import { doc, getDoc, collection, addDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useUser } from '../../context/UserContext';
 import Layout from '../../components/Layout';
+import PhishingSimulation from '../../components/simulations/PhishingSimulation';
 
-// Mock simulation components
+// סימולטור סיסמה חזקה
 const PasswordStrengthSimulator = ({ onComplete }) => {
   const [password, setPassword] = useState('');
   const [strength, setStrength] = useState(0);
@@ -80,80 +77,13 @@ const PasswordStrengthSimulator = ({ onComplete }) => {
   );
 };
 
-const PhishingSimulator = ({ onComplete }) => {
-  const [selectedEmails, setSelectedEmails] = useState({});
-
-  const mockEmails = [
-    {
-      id: 1,
-      from: 'bank@secure-bank.com',
-      subject: 'חשבונך נחסם - פעולה דחופה נדרשת',
-      content: 'לקוח יקר, חשבונך נחסם עקב פעילות חשודה. אנא לחץ כאן להסרת החסימה.',
-      isPhishing: true
-    },
-    {
-      id: 2,
-      from: 'support@microsoft.com',
-      subject: 'עדכון אבטחה חשוב',
-      content: 'משתמש יקר, נדרש עדכון אבטחה למערכת שלך. לחץ לעדכון.',
-      isPhishing: false
-    },
-    {
-      id: 3,
-      from: 'prize@win-lottery.xyz',
-      subject: 'זכית בפרס הגדול!',
-      content: 'ברכות! זכית ב-1,000,000₪! שלח פרטים לקבלת הפרס.',
-      isPhishing: true
-    }
-  ];
-
-  const handleEmailClassification = (emailId, isPhishing) => {
-    const email = mockEmails.find(e => e.id === emailId);
-    const isCorrect = email.isPhishing === isPhishing;
-    
-    setSelectedEmails(prev => ({
-      ...prev,
-      [emailId]: isCorrect
-    }));
-
-    const allCorrect = Object.values(selectedEmails).every(v => v);
-    if (allCorrect && Object.keys(selectedEmails).length === mockEmails.length - 1) {
-      onComplete();
-    }
-  };
-
+// סימולטור פישינג
+const PhishingSimulator = ({ scenario, onComplete }) => {
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h6" gutterBottom>
-        זיהוי הודעות פישינג
-      </Typography>
-      {mockEmails.map(email => (
-        <Card key={email.id} sx={{ mb: 2 }}>
-          <CardContent>
-            <Typography variant="subtitle2">מאת: {email.from}</Typography>
-            <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-              נושא: {email.subject}
-            </Typography>
-            <Typography variant="body1" sx={{ mt: 1 }}>
-              {email.content}
-            </Typography>
-            <Box sx={{ mt: 2 }}>
-              <FormControl fullWidth>
-                <InputLabel>סווג את ההודעה</InputLabel>
-                <Select
-                  value={selectedEmails[email.id] !== undefined ? 'answered' : ''}
-                  label="סווג את ההודעה"
-                  onChange={(e) => handleEmailClassification(email.id, e.target.value === 'phishing')}
-                >
-                  <MenuItem value="legitimate">הודעה לגיטימית</MenuItem>
-                  <MenuItem value="phishing">הודעת פישינג</MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
-          </CardContent>
-        </Card>
-      ))}
-    </Box>
+    <PhishingSimulation
+      scenario={scenario}
+      onComplete={onComplete}
+    />
   );
 };
 
@@ -165,13 +95,16 @@ function SimulationPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [completed, setCompleted] = useState(false);
+  const [blockData, setBlockData] = useState(null);
 
   useEffect(() => {
     const fetchBlock = async () => {
       try {
         const blockDoc = await getDoc(doc(db, 'blocks', blockId));
         if (blockDoc.exists()) {
-          setBlock({ id: blockDoc.id, ...blockDoc.data() });
+          const data = blockDoc.data();
+          setBlock({ id: blockDoc.id, ...data });
+          setBlockData(data);
         } else {
           setError('בלוק הלמידה לא נמצא');
         }
@@ -209,18 +142,28 @@ function SimulationPage() {
   };
 
   const renderSimulation = () => {
-    switch (block.content) {
-      case 'password-strength-simulator':
+    if (!block || !block.type) return null;
+
+    if (block.type === 'simulation') {
+      console.log('Simulation block:', block);
+      console.log('Block data:', blockData);
+      if (blockData?.simulationData?.type === 'password') {
         return <PasswordStrengthSimulator onComplete={handleSimulationComplete} />;
-      case 'phishing-simulator':
-        return <PhishingSimulator onComplete={handleSimulationComplete} />;
-      default:
-        return (
-          <Typography color="error">
-            סימולציה לא נמצאה
-          </Typography>
-        );
+      } else if (blockData?.simulationData?.type === 'phishing') {
+        return blockData?.simulationData ? (
+          <PhishingSimulator
+            scenario={blockData.simulationData}
+            onComplete={handleSimulationComplete}
+          />
+        ) : null;
+      }
     }
+    
+    return (
+      <Typography color="error">
+        סימולציה לא נמצאה
+      </Typography>
+    );
   };
 
   if (loading) {
@@ -255,36 +198,54 @@ function SimulationPage() {
             חזרה לבלוקי למידה
           </Button>
 
-          <Typography variant="h4" gutterBottom>
-            {block.title}
-          </Typography>
+          {block && (
+            <>
+              <Typography variant="h4" gutterBottom>
+                {block.title}
+              </Typography>
 
-          {completed && (
-            <Alert
-              icon={<CheckCircleIcon />}
-              severity="success"
-              sx={{ mb: 2 }}
-            >
-              כל הכבוד! השלמת את הסימולציה בהצלחה
-            </Alert>
-          )}
-
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                {block.content === 'password-strength-simulator' ? (
-                  <SecurityIcon color="primary" sx={{ mr: 1 }} />
-                ) : (
-                  <EmailIcon color="primary" sx={{ mr: 1 }} />
-                )}
-                <Typography variant="h6">
+              {block.description && (
+                <Typography variant="body1" color="text.secondary" paragraph>
                   {block.description}
                 </Typography>
-              </Box>
-              <Divider sx={{ my: 2 }} />
-              {renderSimulation()}
-            </CardContent>
-          </Card>
+              )}
+            </>
+          )}
+
+          {completed && (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <CheckCircleIcon color="success" sx={{ fontSize: 64, mb: 2 }} />
+              <Typography variant="h5" gutterBottom>
+                כל הכבוד! סיימת את הסימולציה בהצלחה
+              </Typography>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() => navigate('/blocks')}
+                startIcon={<ArrowBackIcon />}
+              >
+                חזרה לבלוקי למידה
+              </Button>
+            </Box>
+          )}
+
+          {!completed && block && (
+            <Card sx={{ mb: 3 }}>
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  {block.type === 'password' ? (
+                    <SecurityIcon color="primary" sx={{ mr: 1 }} />
+                  ) : (
+                    <EmailIcon color="primary" sx={{ mr: 1 }} />
+                  )}
+                  <Typography variant="h6">
+                    סימולציה אינטראקטיבית
+                  </Typography>
+                </Box>
+                {renderSimulation()}
+              </CardContent>
+            </Card>
+          )}
         </Box>
       </Container>
     </Layout>

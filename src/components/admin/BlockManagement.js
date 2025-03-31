@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import QuestionDialog from './QuestionDialog';
+import SimulationEditor from './SimulationEditor';
+import { phishingScenarios } from '../../data/phishingScenarios';
 import {
   Box,
   Button,
@@ -49,6 +51,7 @@ function BlockManagement() {
     content: '',
     dependencies: [],
     order: 0,
+    simulationData: null,
     estimatedTime: 30,
     questions: []
   });
@@ -99,7 +102,14 @@ function BlockManagement() {
         dependencies: block.dependencies || [],
         order: block.order,
         estimatedTime: block.estimatedTime || 30,
-        questions: block.questions || []
+        questions: block.questions || [],
+        simulationData: block.type === 'simulation' ? {
+          type: block.simulationData?.type || 'phishing',
+          scenarioId: block.simulationData?.scenarioId || '',
+          difficulty: block.simulationData?.difficulty || 2,
+          time_limit: block.simulationData?.time_limit || 45,
+          content: block.simulationData?.content || null
+        } : null
       });
     } else {
       setEditingBlock(null);
@@ -111,7 +121,8 @@ function BlockManagement() {
         dependencies: [],
         order: blocks.length, // ברירת מחדל לסוף הרשימה
         estimatedTime: 30,
-        questions: []
+        questions: [],
+        simulationData: null
       });
     }
     setOpenDialog(true);
@@ -143,6 +154,21 @@ function BlockManagement() {
           correctAnswer: q.correctAnswer,
           explanation: q.explanation
         }));
+      } else if (formData.type === 'simulation') {
+        if (formData.simulationData.type === 'phishing') {
+          const scenario = phishingScenarios.find(s => s.id === formData.simulationData.scenarioId);
+          if (scenario) {
+            blockData.simulationData = {
+              type: 'phishing',
+              scenarioId: scenario.id,
+              content: scenario.content,
+              difficulty: scenario.difficulty,
+              time_limit: scenario.time_limit
+            };
+          }
+        } else {
+          blockData.simulationData = formData.simulationData;
+        }
       } else {
         blockData.content = formData.content;
       }
@@ -299,7 +325,7 @@ function BlockManagement() {
         </Table>
       </TableContainer>
 
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
+      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>
         <DialogTitle>
           {editingBlock ? 'עריכת בלוק למידה' : 'בלוק למידה חדש'}
         </DialogTitle>
@@ -324,7 +350,29 @@ function BlockManagement() {
               <InputLabel>סוג</InputLabel>
               <Select
                 value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                onChange={(e) => {
+                  const newType = e.target.value;
+                  console.log('Selected type:', newType);
+                  if (newType === 'simulation') {
+                    console.log('Setting simulation data');
+                    setFormData({
+                      ...formData,
+                      type: newType,
+                      simulationData: {
+                        type: 'phishing',
+                        scenarioId: '',
+                        difficulty: 2,
+                        time_limit: 45
+                      }
+                    });
+                  } else {
+                    setFormData({
+                      ...formData,
+                      type: newType,
+                      simulationData: null
+                    });
+                  }
+                }}
                 label="סוג"
               >
                 <MenuItem value="document">מסמך</MenuItem>
@@ -333,7 +381,75 @@ function BlockManagement() {
                 <MenuItem value="simulation">סימולציה</MenuItem>
               </Select>
             </FormControl>
-            {formData.type !== 'quiz' && (
+            {formData.type === 'simulation' ? (
+              <>
+                <FormControl fullWidth>
+                  <InputLabel>סוג סימולציה</InputLabel>
+                  <Select
+                    value={formData.simulationData?.type || 'phishing'}
+                    onChange={(e) => {
+                      const newType = e.target.value;
+                      setFormData({
+                        ...formData,
+                        simulationData: {
+                          type: newType,
+                          scenarioId: '',
+                          difficulty: 2,
+                          time_limit: 45
+                        }
+                      });
+                    }}
+                    label="סוג סימולציה"
+                  >
+                    <MenuItem value="phishing">פישינג</MenuItem>
+                    <MenuItem value="password">סיסמה חזקה</MenuItem>
+                  </Select>
+                </FormControl>
+
+                {(() => {
+                  console.log('formData:', formData);
+                  console.log('simulationData:', formData.simulationData);
+                  console.log('phishingScenarios:', phishingScenarios);
+                  return formData.simulationData?.type === 'phishing' && (
+                    <FormControl fullWidth>
+                      <InputLabel id="phishing-scenario-label">תרחיש פישינג</InputLabel>
+                      <Select
+                        labelId="phishing-scenario-label"
+                        value={formData.simulationData?.scenarioId || ''}
+                        onChange={(e) => {
+                          console.log('Selected value:', e.target.value);
+                          const scenario = phishingScenarios.find(s => s.id === e.target.value);
+                          console.log('Found scenario:', scenario);
+                          if (scenario) {
+                            setFormData({
+                              ...formData,
+                              simulationData: {
+                                ...formData.simulationData,
+                                scenarioId: e.target.value,
+                                content: scenario.content,
+                                difficulty: scenario.difficulty,
+                                time_limit: scenario.time_limit
+                              }
+                            });
+                          }
+                        }}
+                        label="תרחיש פישינג"
+                      >
+                        {phishingScenarios.map((scenario) => {
+                          console.log('Mapping scenario:', scenario);
+                          return (
+                            <MenuItem key={scenario.id} value={scenario.id}>
+                              {scenario.content.subject}
+                            </MenuItem>
+                          );
+                        })}
+                      </Select>
+                    </FormControl>
+                  );
+                })()
+                }
+              </>
+            ) : formData.type !== 'quiz' ? (
               <TextField
                 label="תוכן"
                 value={formData.content}
@@ -343,8 +459,8 @@ function BlockManagement() {
                 rows={4}
                 helperText={formData.type === 'video' ? 'הכנס קישור לסרטון' : 'הכנס את התוכן'}
               />
-            )}
-            
+            ) : null
+          }
             {formData.type === 'quiz' && (
               <Box>
                 <Typography variant="subtitle1" gutterBottom>

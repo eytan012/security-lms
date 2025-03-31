@@ -205,7 +205,7 @@ function ProfilePage() {
               <CardContent>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
                   <Typography variant="h4" gutterBottom>
-                    פרופיל משתמש
+                  הפרופיל שלי
                   </Typography>
                   <IconButton onClick={handleEditProfile} size="large">
                     <EditIcon />
@@ -219,49 +219,54 @@ function ProfilePage() {
                 </Typography>
                 <List>
                   <ListItem>
+                    <ListItemText 
+                      primary="שם" 
+                      secondary={user?.name} 
+                      sx={{ textAlign: 'right', ml: 'auto' }}
+                    />
                     <ListItemIcon>
                       <PersonIcon />
                     </ListItemIcon>
-                    <ListItemText primary="שם" secondary={user?.name} />
                   </ListItem>
                   <ListItem>
+                    <ListItemText 
+                      primary="אימייל" 
+                      secondary={user?.email} 
+                      sx={{ textAlign: 'right', ml: 'auto' }}
+                    />
                     <ListItemIcon>
                       <EmailIcon />
                     </ListItemIcon>
-                    <ListItemText primary="אימייל" secondary={user?.email} />
                   </ListItem>
                   <ListItem>
+                    <ListItemText 
+                      primary="מחלקה" 
+                      secondary={departments.find(d => d.id === user?.department)?.name || 'ללא'} 
+                      sx={{ textAlign: 'right', ml: 'auto' }}
+                    />
                     <ListItemIcon>
                       <BusinessIcon />
                     </ListItemIcon>
-                    <ListItemText 
-                      primary="מחלקה" 
-                      secondary={departments.find(d => d.id === user?.department)?.name || 'לא צוין'} 
-                    />
                   </ListItem>
                   <ListItem>
+                    <ListItemText 
+                      primary="כניסה אחרונה" 
+                      secondary={user?.lastLogin ? new Date(user.lastLogin).toLocaleDateString('he-IL') : 'בבניה'} 
+                      sx={{ textAlign: 'right', ml: 'auto' }}
+                    />
                     <ListItemIcon>
                       <AccessTimeIcon />
                     </ListItemIcon>
-                    <ListItemText primary="כניסה אחרונה" secondary={user?.lastLogin ? new Date(user.lastLogin).toLocaleDateString('he-IL') : 'לא ידוע'} />
                   </ListItem>
                   <ListItem>
+                    <ListItemText 
+                      primary="שפה(בבניה)" 
+                      secondary="בבניה"
+                      sx={{ textAlign: 'right', ml: 'auto' }}
+                    />
                     <ListItemIcon>
                       <LanguageIcon />
                     </ListItemIcon>
-                    <ListItemText primary="שפה" />
-                    <ListItemSecondaryAction>
-                      <FormControl size="small" sx={{ minWidth: 120 }}>
-                        <Select
-                          value={language}
-                          onChange={handleLanguageChange}
-                          displayEmpty
-                        >
-                          <MenuItem value="he">עברית</MenuItem>
-                          <MenuItem value="en">English</MenuItem>
-                        </Select>
-                      </FormControl>
-                    </ListItemSecondaryAction>
                   </ListItem>
                 </List>
 
@@ -322,43 +327,91 @@ function ProfilePage() {
                   </Alert>
                 )}
 
-                <Divider sx={{ my: 3 }} />
+                {/* Achievements and Recent Exams */}
+                <Box sx={{ mt: 4 }}>
+                  <Typography variant="h6" gutterBottom>
+                    הישגים ומבחנים אחרונים
+                  </Typography>
 
-                {/* Achievements and Recent Tests */}
-                <Typography variant="h6" gutterBottom>
-                  הישגים ומבחנים אחרונים
-                </Typography>
-                <Typography variant="subtitle2" color="primary" sx={{ mt: 2, mb: 1 }}>
-                  הישגים
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 3 }}>
-                  {achievements.map((achievement) => (
-                    <Tooltip key={achievement.id} title={achievement.description}>
-                      <Chip
-                        icon={<AchievementIcon />}
-                        label={achievement.title}
-                        variant="outlined"
-                        color="primary"
-                      />
-                    </Tooltip>
-                  ))}
-                </Box>
-                <Typography variant="subtitle2" color="primary" sx={{ mb: 1 }}>
-                  ציוני מבחנים אחרונים
-                </Typography>
-                <List>
-                  {recentTests.map((test) => (
-                    <ListItem key={test.id}>
-                      <ListItemIcon>
-                        <GradeIcon color={test.score >= 90 ? 'success' : 'primary'} />
-                      </ListItemIcon>
+                  {/* Achievements */}
+                  <Typography variant="subtitle1" color="primary" gutterBottom sx={{ mt: 2 }}>
+                    הישגים
+                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2,  }}>
+                    <Chip
+                      sx={{ margin: 1 }}
+                      icon={<AchievementIcon />}
+                      label="מקצוען"
+                      color="primary"
+                      variant="outlined"
+                    />
+                    <Chip
+                    sx={{ margin: 1 }}
+                      icon={<AchievementIcon />}
+                      label="לומד מתמיד"
+                      color="primary"
+                      variant="outlined"
+                    />
+                    <Chip
+                    sx={{ margin: 1 }}
+                      icon={<AchievementIcon />}
+                      label="מסיים מצטיין"
+                      color="primary"
+                      variant="outlined"
+                    />
+                  </Box>
+
+                  {/* Recent Exams */}
+                  <Typography variant="subtitle1" color="primary" gutterBottom sx={{ mt: 3 }}>
+                    ציון מבחנים אחרונים
+                  </Typography>
+                  <List>
+                    <ListItem>
                       <ListItemText
-                        primary={test.title}
-                        secondary={`ציון: ${test.score}% | ${new Date(test.date).toLocaleDateString('he-IL')}`}
+                        primary="מבחן אבטחת מידע בסיסית"
+                        secondary={
+                          <Typography variant="body2" component="span">
+                            ציון: 95% | 20.3.2025
+                          </Typography>
+                        }
+                        sx={{ textAlign: 'right', ml: 'auto' }}
                       />
+                      <ListItemIcon>
+                        <GradeIcon sx={{ color: '#4caf50' }} />
+                      </ListItemIcon>
                     </ListItem>
-                  ))}
-                </List>
+                    <ListItem>
+                      <ListItemText
+                        primary="מבחן הגנת סייבר"
+                        secondary={
+                          <Typography variant="body2" component="span">
+                            ציון: 88% | 15.3.2025
+                          </Typography>
+                        }
+                        sx={{ textAlign: 'right', ml: 'auto' }}
+                      />
+                      <ListItemIcon>
+                        <GradeIcon sx={{ color: '#2196f3' }} />
+                      </ListItemIcon>
+                    </ListItem>
+                    <ListItem>
+                      <ListItemText
+                        primary="מבחן אבטחת רשתות"
+                        secondary={
+                          <Typography variant="body2" component="span">
+                            ציון: 92% | 10.3.2025
+                          </Typography>
+                        }
+                        sx={{ textAlign: 'right', ml: 'auto' }}
+                      />
+                      <ListItemIcon>
+                        <GradeIcon sx={{ color: '#4caf50' }} />
+                      </ListItemIcon>
+                    </ListItem>
+                  </List>
+                </Box>
+
+
               </CardContent>
             </Card>
           </Grid>
