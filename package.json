@@ -16,11 +16,17 @@
     "esm": "^3.2.25",
     "firebase": "^11.5.0",
     "firebase-admin": "^13.2.0",
+    "framer-motion": "^12.6.3",
+    "i18next": "^24.2.3",
+    "i18next-browser-languagedetector": "^8.0.4",
     "react": "^19.0.0",
     "react-chartjs-2": "^5.3.0",
     "react-dom": "^19.0.0",
+    "react-i18next": "^15.4.1",
     "react-router-dom": "^7.4.0",
     "react-scripts": "5.0.1",
+    "stylis": "^4.3.6",
+    "stylis-plugin-rtl": "^2.1.1",
     "web-vitals": "^2.1.4"
   },
   "scripts": {

@@ -1,0 +1,131 @@
+{
+  "translation": {
+    "app": {
+      "title": "לומדת אבטחת מידע",
+      "menu": {
+        "profile": "פרופיל",
+        "course": "לומדה",
+        "statistics": "סטטיסטיקות",
+        "admin": "ניהול",
+        "logout": "התנתקות"
+      }
+    },
+    "languages": {
+      "hebrew": "עברית",
+      "english": "English"
+        },
+    "common": {
+      "next": "הבא",
+      "previous": "הקודם",
+      "submit": "שלח",
+      "cancel": "בטל",
+      "save": "שמור",
+      "delete": "מחק",
+      "edit": "ערוך",
+      "view": "צפה",
+      "loading": "טוען..."
+    },
+    "auth": {
+      "login": "התחברות",
+      "email": "דואר אלקטרוני",
+      "password": "סיסמה",
+      "forgotPassword": "שכחתי סיסמה",
+      "signIn": "התחבר",
+      "loginError": "שגיאת התחברות",
+      "invalidCredentials": "פרטי התחברות שגויים"
+    },
+    "profile": {
+      "title": "פרופיל משתמש",
+      "welcome": "ברוך הבא",
+      "progress": "התקדמות",
+      "completedBlocks": "בלוקים שהושלמו",
+      "totalBlocks": "סך כל הבלוקים",
+      "lastActivity": "פעילות אחרונה",
+      "noActivity": "אין פעילות אחרונה",
+      "language": "שפה",
+      "name": "שם",
+      "email": "דואר אלקטרוני",
+      "department": "מחלקה",
+      "lastLogin": "התחברות אחרונה",
+      "never": "מעולם לא",
+      "notProvided": "לא צוין"
+    },
+    "learning": {
+      "title": "בלוקי למידה",
+      "startBlock": "התחלת בלוק למידה",
+      "confirmStart": "האם להתחיל את הבלוק",
+      "start": "התחל",
+      "starting": "מתחיל...",
+      "viewAgain": "צפה שוב",
+      "estimatedTime": "זמן משוער",
+      "minutes": "דקות",
+      "status": {
+        "locked": "נעול",
+        "available": "זמין",
+        "inProgress": "בתהליך",
+        "completed": "הושלם",
+        "failed": "נכשל"
+      },
+      "types": {
+        "video": "סרטון הדרכה",
+        "document": "מסמך לימוד",
+        "quiz": "בוחן ידע",
+        "simulation": "תרגול והתנסות מעשית",
+        "default": "חומר לימוד"
+      }
+    },
+    "quiz": {
+      "title": "בוחן ידע",
+      "question": "שאלה",
+      "of": "מתוך",
+      "submit": "שלח תשובות",
+      "submitting": "שולח...",
+      "results": "תוצאות",
+      "score": "ציון",
+      "passed": "עברת בהצלחה",
+      "failed": "לא עברת",
+      "retry": "נסה שוב",
+      "continue": "המשך",
+      "correctAnswers": "תשובות נכונות",
+      "yourAnswers": "התשובות שלך"
+    },
+    "simulation": {
+      "title": "סימולציה",
+      "instructions": "הוראות",
+      "start": "התחל סימולציה",
+      "complete": "סיים סימולציה",
+      "completed": "סימולציה הושלמה",
+      "feedback": "משוב"
+    },
+    "admin": {
+      "title": "ניהול מערכת",
+      "users": "משתמשים",
+      "blocks": "בלוקים",
+      "statistics": "סטטיסטיקות",
+      "settings": "הגדרות",
+      "addUser": "הוסף משתמש",
+      "editUser": "ערוך משתמש",
+      "deleteUser": "מחק משתמש",
+      "addBlock": "הוסף בלוק",
+      "editBlock": "ערוך בלוק",
+      "deleteBlock": "מחק בלוק"
+    },
+    "statistics": {
+      "title": "סטטיסטיקות",
+      "overview": "סקירה כללית",
+      "userProgress": "התקדמות משתמשים",
+      "blockCompletion": "השלמת בלוקים",
+      "quizResults": "תוצאות בחנים",
+      "averageScore": "ציון ממוצע",
+      "completionRate": "שיעור השלמה",
+      "timeSpent": "זמן שהושקע"
+    },
+    "errors": {
+      "general": "אירעה שגיאה",
+      "tryAgain": "נסה שוב מאוחר יותר",
+      "notFound": "הדף לא נמצא",
+      "unauthorized": "אין הרשאה",
+      "sessionExpired": "פג תוקף החיבור, אנא התחבר מחדש"
+    }
+  }
+}

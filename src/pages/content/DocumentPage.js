@@ -65,6 +65,14 @@ function DocumentPage() {
       </Layout>
     );
   }
+  
+  // בדיקת סוג הבלוק והתוכן שלו
+  console.log('Block data:', block);
+  
+  // בדיקה אם זה בלוק מסוג document
+  if (block.type !== 'document') {
+    console.error('Block type is not document:', block.type);
+  }
 
   return (
     <Layout>
@@ -84,7 +92,8 @@ function DocumentPage() {
 
           <Paper sx={{ p: 3, mt: 3 }}>
             <Typography variant="body1" component="div" sx={{ whiteSpace: 'pre-wrap' }}>
-              {block.content}
+              {/* בדיקה של מיקום התוכן - ישירות בבלוק או בתוך documentData */}
+              {block.documentData?.content || block.content || 'אין תוכן זמין לתצוגה'}
             </Typography>
           </Paper>
         </Box>

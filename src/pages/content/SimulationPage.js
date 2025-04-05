@@ -24,6 +24,7 @@ import { db } from '../../firebase/config';
 import { useUser } from '../../context/UserContext';
 import Layout from '../../components/Layout';
 import PhishingSimulation from '../../components/simulations/PhishingSimulation';
+import SimulationWrapper from '../../components/simulations/SimulationWrapper';
 
 // סימולטור סיסמה חזקה
 const PasswordStrengthSimulator = ({ onComplete }) => {
@@ -42,17 +43,17 @@ const PasswordStrengthSimulator = ({ onComplete }) => {
   const handleChange = (event) => {
     const pwd = event.target.value;
     setPassword(pwd);
-    setStrength(calculateStrength(pwd));
-    if (calculateStrength(pwd) >= 3) {
-      onComplete();
+    const currentStrength = calculateStrength(pwd);
+    setStrength(currentStrength);
+    if (currentStrength >= 3) {
+      // חישוב ציון באחוזים (מתוך 4 אפשריים)
+      const scorePercentage = (currentStrength / 4) * 100;
+      onComplete(scorePercentage);
     }
   };
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h6" gutterBottom>
-        סימולטור סיסמה חזקה
-      </Typography>
       <TextField
         fullWidth
         type="text"
@@ -79,10 +80,15 @@ const PasswordStrengthSimulator = ({ onComplete }) => {
 
 // סימולטור פישינג
 const PhishingSimulator = ({ scenario, onComplete }) => {
+  const handlePhishingComplete = (phishingScore) => {
+    // קבלת ציון מרכיב הפישינג והעברתו הלאה
+    onComplete(phishingScore);
+  };
+  
   return (
     <PhishingSimulation
       scenario={scenario}
-      onComplete={onComplete}
+      onComplete={handlePhishingComplete}
     />
   );
 };
@@ -96,6 +102,8 @@ function SimulationPage() {
   const [error, setError] = useState(null);
   const [completed, setCompleted] = useState(false);
   const [blockData, setBlockData] = useState(null);
+  const [score, setScore] = useState(0);
+  const [showResults, setShowResults] = useState(false);
 
   useEffect(() => {
     const fetchBlock = async () => {
@@ -119,16 +127,19 @@ function SimulationPage() {
     fetchBlock();
   }, [blockId]);
 
-  const handleSimulationComplete = async () => {
+  const handleSimulationComplete = async (simulationScore = 85) => {
     try {
-      // Add completion record
+      console.log(`סימולציה הושלמה עם ציון: ${simulationScore}%`);
+      
+      // Add completion record with score
       const progressRef = collection(db, 'progress');
       await addDoc(progressRef, {
         userId: user.id,
         blockId,
         completed: true,
         completedAt: Timestamp.now(),
-        type: 'simulation'
+        type: 'simulation',
+        score: simulationScore // שמירת הציון בפיירסטור
       });
 
       // Force parent page to refresh
@@ -144,18 +155,69 @@ function SimulationPage() {
   const renderSimulation = () => {
     if (!block || !block.type) return null;
 
+    console.log('Simulation block:', block);
+    console.log('Block data:', blockData);
+
+    // בדיקה אם זה בלוק סימולציה
     if (block.type === 'simulation') {
-      console.log('Simulation block:', block);
-      console.log('Block data:', blockData);
+      // אם יש מידע על סוג הסימולציה בתוך simulationData
       if (blockData?.simulationData?.type === 'password') {
-        return <PasswordStrengthSimulator onComplete={handleSimulationComplete} />;
+        return (
+          <SimulationWrapper 
+            title="סימולטור סיסמה חזקה" 
+            simulationType="password"
+            onComplete={handleSimulationComplete}
+          >
+            <PasswordStrengthSimulator />
+          </SimulationWrapper>
+        );
       } else if (blockData?.simulationData?.type === 'phishing') {
         return blockData?.simulationData ? (
-          <PhishingSimulator
-            scenario={blockData.simulationData}
+          <SimulationWrapper 
+            title="סימולציית פישינג" 
+            simulationType="phishing"
+            onComplete={handleSimulationComplete}
+          >
+            <PhishingSimulator scenario={blockData.simulationData} />
+          </SimulationWrapper>
+        ) : null;
+      }
+      // אם אין סוג מוגדר בתוך simulationData, בדוק את שם הבלוק או תיאור
+      else if (block.title?.includes('סיסמאות') || block.description?.includes('סיסמאות')) {
+        console.log('זיהוי סימולציית סיסמאות לפי כותרת או תיאור');
+        return (
+          <SimulationWrapper 
+            title="סימולטור סיסמה חזקה" 
+            simulationType="password"
+            onComplete={handleSimulationComplete}
+          >
+            <PasswordStrengthSimulator />
+          </SimulationWrapper>
+        );
+      }
+      // בדיקה לסימולציית אלקטרה
+      else if (block.title?.includes('אלקטרה') || block.description?.includes('אלקטרה')) {
+        console.log('זיהוי סימולציית אלקטרה לפי כותרת או תיאור');
+        return (
+          <SimulationWrapper 
+            title="בוחן אלקטרה" 
+            description={block.description}
+            simulationType="אלקטרה"
             onComplete={handleSimulationComplete}
           />
-        ) : null;
+        );
+      }
+      // אם זה סוג סימולציה חדש שלא מוכר עדיין
+      else if (block.simulationType || blockData?.simulationType) {
+        const simType = block.simulationType || blockData?.simulationType;
+        return (
+          <SimulationWrapper 
+            title={block.title || `סימולציית ${simType}`} 
+            description={block.description}
+            simulationType={simType}
+            onComplete={handleSimulationComplete}
+          />
+        );
       }
     }
     
@@ -214,10 +276,6 @@ function SimulationPage() {
 
           {completed && (
             <Box sx={{ textAlign: 'center', py: 4 }}>
-              <CheckCircleIcon color="success" sx={{ fontSize: 64, mb: 2 }} />
-              <Typography variant="h5" gutterBottom>
-                כל הכבוד! סיימת את הסימולציה בהצלחה
-              </Typography>
               <Button
                 variant="contained"
                 color="primary"

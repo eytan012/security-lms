@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Container,
   Typography,
@@ -36,6 +37,7 @@ ChartJS.register(
 );
 
 function StatisticsPage() {
+  const { t } = useTranslation();
   const { user } = useUser();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -71,7 +73,7 @@ function StatisticsPage() {
 
   // Prepare data for the completion chart
   const completionData = {
-    labels: ['הושלם', 'בתהליך', 'טרם התחיל'],
+    labels: [t('learning.status.completed'), t('learning.status.inProgress'), t('learning.status.available')],
     datasets: [
       {
         data: [
@@ -97,11 +99,11 @@ function StatisticsPage() {
   // Prepare data for the scores chart
   const scoresData = {
     labels: Object.keys(stats?.blockStatistics || {}).map(blockId => 
-      `בלוק ${blockId}`
+      `${t('admin.blocks')} ${blockId}`
     ),
     datasets: [
       {
-        label: 'ציון הטוב ביותר',
+        label: t('statistics.averageScore'),
         data: Object.values(stats?.blockStatistics || {}).map(block => 
           block.bestScore
         ),
@@ -116,7 +118,7 @@ function StatisticsPage() {
     <Layout>
       <Container>
         <Typography variant="h4" gutterBottom align="center">
-          סטטיסטיקות
+          {t('statistics.title')}
         </Typography>
 
         <Grid container spacing={3}>
@@ -124,7 +126,7 @@ function StatisticsPage() {
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
-                  התקדמות כללית
+                  {t('profile.progress')}
                 </Typography>
                 <Box sx={{ height: 300 }}>
                   <Doughnut 
@@ -143,7 +145,7 @@ function StatisticsPage() {
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
-                  ציונים לפי בלוק
+                  {t('statistics.quizResults')}
                 </Typography>
                 <Box sx={{ height: 300 }}>
                   <Bar
@@ -168,16 +170,16 @@ function StatisticsPage() {
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
-                  סיכום
+                  {t('statistics.overview')}
                 </Typography>
                 <Typography variant="body1">
-                  זמן כולל בלומדה: {stats?.totalTimeSpent || 0} דקות
+                  {t('statistics.timeSpent')}: {stats?.totalTimeSpent || 0} {t('learning.minutes')}
                 </Typography>
                 <Typography variant="body1">
-                  ממוצע ציונים: {stats?.averageScore || 0}
+                  {t('statistics.averageScore')}: {stats?.averageScore || 0}
                 </Typography>
                 <Typography variant="body1">
-                  בלוקים שהושלמו: {stats?.completedBlocks || 0} מתוך {stats?.totalBlocks || 0}
+                  {t('profile.completedBlocks')}: {stats?.completedBlocks || 0} {t('quiz.of')} {stats?.totalBlocks || 0}
                 </Typography>
               </CardContent>
             </Card>

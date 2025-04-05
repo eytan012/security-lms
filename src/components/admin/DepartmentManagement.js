@@ -132,7 +132,6 @@ function DepartmentManagement() {
           <TableHead>
             <TableRow>
               <TableCell>שם המחלקה</TableCell>
-              <TableCell>תיאור</TableCell>
               <TableCell>מנהל</TableCell>
               <TableCell>פעולות</TableCell>
             </TableRow>
@@ -141,7 +140,6 @@ function DepartmentManagement() {
             {departments.map((department) => (
               <TableRow key={department.id}>
                 <TableCell>{department.name}</TableCell>
-                <TableCell>{department.description || 'אין תיאור'}</TableCell>
                 <TableCell>{department.manager || 'לא צוין'}</TableCell>
                 <TableCell>
                   <IconButton onClick={() => handleOpenDialog(department)} size="small">
@@ -181,7 +179,7 @@ function DepartmentManagement() {
             />
             <TextField
               name="manager"
-              label="מנהל"
+              label="ראש צוות"
               value={formData.manager}
               onChange={handleInputChange}
               fullWidth

@@ -177,14 +177,19 @@ const PhishingSimulation = ({ scenario, onComplete }) => {
       </Card>
 
       {/* דיאלוג משוב */}
-      <Dialog open={showFeedback} onClose={() => onComplete(score)}>
+      <Dialog open={showFeedback} onClose={() => {
+        // המרת הציון לאחוזים (0-100)
+        const normalizedScore = Math.max(0, Math.min(100, score));
+        // העברת הציון באחוזים לדף הסימולציה הראשי
+        onComplete(normalizedScore);
+      }}>
         <DialogTitle>
           {score >= 0 ? 'כל הכבוד!' : 'אופס...'}
         </DialogTitle>
         <DialogContent>
           <Typography>{feedback}</Typography>
           <Typography variant="h6" sx={{ mt: 2 }}>
-            ניקוד: {score}
+            ניקוד: {score} ({Math.max(0, Math.min(100, score))}%)
           </Typography>
           <Typography variant="subtitle1" sx={{ mt: 2 }}>
             סימנים מחשידים שהיית צריך לשים לב אליהם:
@@ -200,7 +205,12 @@ const PhishingSimulation = ({ scenario, onComplete }) => {
           </ul>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => onComplete(score)}>המשך</Button>
+          <Button onClick={() => {
+            // המרת הציון לאחוזים (0-100)
+            const normalizedScore = Math.max(0, Math.min(100, score));
+            // העברת הציון באחוזים לדף הסימולציה הראשי
+            onComplete(normalizedScore);
+          }}>המשך</Button>
         </DialogActions>
       </Dialog>
     </Box>

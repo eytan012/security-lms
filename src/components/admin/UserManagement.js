@@ -26,11 +26,13 @@ import {
   Delete as DeleteIcon,
   Add as AddIcon
 } from '@mui/icons-material';
-import { collection, getDocs, doc, updateDoc, deleteDoc, addDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, deleteDoc, addDoc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 
 function UserManagement() {
   const [users, setUsers] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [departmentMap, setDepartmentMap] = useState({});
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [formData, setFormData] = useState({
@@ -42,6 +44,7 @@ function UserManagement() {
 
   useEffect(() => {
     fetchUsers();
+    fetchDepartments();
   }, []);
 
   const fetchUsers = async () => {
@@ -58,13 +61,34 @@ function UserManagement() {
     }
   };
 
+  const fetchDepartments = async () => {
+    try {
+      const departmentsRef = collection(db, 'departments');
+      const snapshot = await getDocs(departmentsRef);
+      const departmentsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setDepartments(departmentsData);
+      
+      // Create a map of department IDs to department names for easy lookup
+      const deptMap = {};
+      departmentsData.forEach(dept => {
+        deptMap[dept.id] = dept.name;
+      });
+      setDepartmentMap(deptMap);
+    } catch (error) {
+      console.error('Error fetching departments:', error);
+    }
+  };
+
   const handleOpenDialog = (user = null) => {
     if (user) {
       setSelectedUser(user);
       setFormData({
-        name: user.name,
-        email: user.email,
-        role: user.role,
+        name: user.name || '',
+        email: user.email || '',
+        role: user.role || 'student',
         department: user.department || ''
       });
     } else {
@@ -94,13 +118,21 @@ function UserManagement() {
 
   const handleSubmit = async () => {
     try {
+      // Ensure all form values are defined
+      const cleanFormData = {
+        name: formData.name || '',
+        email: formData.email || '',
+        role: formData.role || 'student',
+        department: formData.department || ''
+      };
+      
       if (selectedUser) {
         // עדכון משתמש קיים
         const userRef = doc(db, 'users', selectedUser.id);
-        await updateDoc(userRef, formData);
+        await updateDoc(userRef, cleanFormData);
       } else {
         // יצירת משתמש חדש
-        await addDoc(collection(db, 'users'), formData);
+        await addDoc(collection(db, 'users'), cleanFormData);
       }
       handleCloseDialog();
       fetchUsers();
@@ -148,10 +180,10 @@ function UserManagement() {
           <TableBody>
             {users.map((user) => (
               <TableRow key={user.id}>
-                <TableCell>{user.name}</TableCell>
-                <TableCell>{user.email}</TableCell>
+                <TableCell>{user.name || 'לא צוין'}</TableCell>
+                <TableCell>{user.email || 'לא צוין'}</TableCell>
                 <TableCell>{user.role === 'admin' ? 'מנהל' : 'תלמיד'}</TableCell>
-                <TableCell>{user.department || 'לא צוין'}</TableCell>
+                <TableCell>{departmentMap[user.department] || 'לא צוין'}</TableCell>
                 <TableCell>
                   <IconButton onClick={() => handleOpenDialog(user)} size="small">
                     <EditIcon />
@@ -198,13 +230,22 @@ function UserManagement() {
                 <MenuItem value="admin">מנהל</MenuItem>
               </Select>
             </FormControl>
-            <TextField
-              name="department"
-              label="מחלקה"
-              value={formData.department}
-              onChange={handleInputChange}
-              fullWidth
-            />
+            <FormControl fullWidth>
+              <InputLabel>מחלקה</InputLabel>
+              <Select
+                name="department"
+                value={formData.department}
+                onChange={handleInputChange}
+                label="מחלקה"
+              >
+                <MenuItem value="">לא צוין</MenuItem>
+                {departments.map((dept) => (
+                  <MenuItem key={dept.id} value={dept.id}>
+                    {dept.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Box>
         </DialogContent>
         <DialogActions>

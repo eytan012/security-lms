@@ -19,7 +19,7 @@
 .env.test.local
 .env.production.local
 security-lms-firebase-adminsdk-fbsvc-02bed226be.json
-serviceAccountKey.json
+admin.json
 
 # Firebase config and keys
 firebase-config.json

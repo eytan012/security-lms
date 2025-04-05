@@ -31,7 +31,7 @@ import {
   Info as InfoIcon,
   RestartAlt as RestartAltIcon
 } from '@mui/icons-material';
-import { doc, getDoc, collection, addDoc, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc, updateDoc, Timestamp, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useUser } from '../../context/UserContext';
 import Layout from '../../components/Layout';
@@ -55,21 +55,40 @@ function QuizPage() {
       try {
         const blockDoc = await getDoc(doc(db, 'blocks', blockId));
         if (blockDoc.exists()) {
+          console.log('Block found:', blockDoc.data());
           const blockData = blockDoc.data();
           const questionsWithIds = (blockData.questions || []).map((q, idx) => {
-            // הוספת מזהה לשאלה
-            const questionId = `quiz-${blockDoc.id}-${idx}`;
-            // הוספת מזההים לאפשרויות
-            const optionsWithIds = (q.options || []).map((opt, optIdx) => ({
-              text: opt,
-              id: `${questionId}-opt-${optIdx}`,
-              value: optIdx
-            }));
+            // בדיקה אם השאלה כבר מכילה מזהה
+            const questionId = q.id || `quiz-${blockDoc.id}-${idx}`;
+            
+            // בדיקה אם האפשרויות כבר מכילות מזהים
+            let processedOptions;
+            if (Array.isArray(q.options)) {
+              // בדיקה אם האפשרויות הן כבר אובייקטים
+              if (q.options.length > 0 && typeof q.options[0] === 'object' && q.options[0] !== null) {
+                // האפשרויות כבר בפורמט הנכון
+                processedOptions = q.options.map((opt, optIdx) => ({
+                  text: opt.text || `אפשרות ${optIdx + 1}`,
+                  id: opt.id || `${questionId}-opt-${optIdx}`,
+                  value: opt.value !== undefined ? opt.value : optIdx
+                }));
+              } else {
+                // האפשרויות הן מחרוזות פשוטות
+                processedOptions = q.options.map((opt, optIdx) => ({
+                  text: opt,
+                  id: `${questionId}-opt-${optIdx}`,
+                  value: optIdx
+                }));
+              }
+            } else {
+              // אם אין אפשרויות, ניצור מערך ריק
+              processedOptions = [];
+            }
             
             return {
               ...q,
               id: questionId,
-              options: optionsWithIds
+              options: processedOptions
             };
           });
           
@@ -130,19 +149,36 @@ function QuizPage() {
     setShowResults(true);
 
     try {
-      // Add completion record
+      // בדיקה אם כבר קיים רשומת התקדמות קודמת
       const progressRef = collection(db, 'progress');
+      const existingProgressQuery = query(
+        progressRef,
+        where('userId', '==', user.id),
+        where('blockId', '==', blockId)
+      );
+      const existingProgressSnapshot = await getDocs(existingProgressQuery);
+      
+      // יצירת אובייקט ההתקדמות החדש
       const newProgress = {
         userId: user.id,
         blockId,
-        completed: finalScore >= 70, // Only mark as completed if score is 70% or higher
+        completed: true, // מסמן את הבוחן כהושלם בכל מקרה
+        passed: finalScore >= 70, // מסמן אם הציון מספיק למעבר
         completedAt: Timestamp.now(),
         type: 'quiz',
-        score: finalScore
+        score: finalScore,
+        answers: answers // שמירת התשובות של המשתמש
       };
 
-      await addDoc(progressRef, newProgress);
-      console.log('Saved quiz progress:', newProgress);
+      // אם כבר קיים רשומה, נעדכן אותה. אחרת ניצור חדשה
+      if (!existingProgressSnapshot.empty) {
+        const existingDoc = existingProgressSnapshot.docs[0];
+        await updateDoc(doc(db, 'progress', existingDoc.id), newProgress);
+        console.log('Updated existing quiz progress:', newProgress);
+      } else {
+        await addDoc(progressRef, newProgress);
+        console.log('Saved new quiz progress:', newProgress);
+      }
 
       // Force parent page to refresh
       window.dispatchEvent(new Event('focus'));
@@ -352,14 +388,32 @@ function QuizPage() {
                   value={answers[block.questions[currentQuestion].id] === null ? '' : answers[block.questions[currentQuestion].id]}
                   onChange={handleAnswerChange}
                 >
-                  {block.questions[currentQuestion].options.map((option, index) => (
-                    <FormControlLabel
-                      key={`option-${option.id}`}
-                      value={option.value}
-                      control={<Radio />}
-                      label={option.text}
-                    />
-                  ))}
+                  {Array.isArray(block.questions[currentQuestion].options) && 
+                    block.questions[currentQuestion].options.map((option, index) => {
+                      // וידוא שהאופציה היא אובייקט תקין
+                      if (typeof option === 'object' && option !== null) {
+                        return (
+                          <FormControlLabel
+                            key={`option-${option.id || index}`}
+                            value={option.value !== undefined ? option.value : index}
+                            control={<Radio />}
+                            label={option.text || `אפשרות ${index + 1}`}
+                          />
+                        );
+                      } else if (typeof option === 'string') {
+                        // אם האופציה היא מחרוזת פשוטה
+                        return (
+                          <FormControlLabel
+                            key={`option-${index}`}
+                            value={index}
+                            control={<Radio />}
+                            label={option}
+                          />
+                        );
+                      }
+                      return null;
+                    })
+                  }
                 </RadioGroup>
               </FormControl>
             </CardContent>

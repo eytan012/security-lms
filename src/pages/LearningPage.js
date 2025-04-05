@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Container,
   Typography,
   Grid,
-  Card,
   CardContent,
   CardActions,
-  Button,
   LinearProgress,
   Box,
   Chip,
@@ -16,6 +15,7 @@ import {
   DialogActions,
   CircularProgress
 } from '@mui/material';
+import { motion } from 'framer-motion';
 import {
   PlayArrow as PlayIcon,
   Assignment as AssignmentIcon,
@@ -31,7 +31,13 @@ import { useUser } from '../context/UserContext';
 import Layout from '../components/Layout';
 import { useNavigate } from 'react-router-dom';
 
+// Animated Components
+import AnimatedCard from '../components/AnimatedCard';
+import AnimatedButton from '../components/AnimatedButton';
+import AnimatedList from '../components/AnimatedList';
+
 function LearningPage() {
+  const { t } = useTranslation();
   const { user } = useUser();
   const navigate = useNavigate();
   const [blocks, setBlocks] = useState([]);
@@ -52,12 +58,11 @@ function LearningPage() {
           ...doc.data()
         }));
 
-        // Fetch user's progress
+        // Fetch user's progress - כולל גם רשומות שהושלמו וגם שהתחילו
         const progressRef = collection(db, 'progress');
         const progressQuery = query(
           progressRef,
-          where('userId', '==', user.id),
-          where('completed', '==', true)
+          where('userId', '==', user.id)
         );
         const progressSnapshot = await getDocs(progressQuery);
         const progressData = {};
@@ -67,7 +72,6 @@ function LearningPage() {
           progressData[data.blockId] = data;
         });
 
-        console.log('Progress data:', progressData);
 
         // Sort blocks by order and add isLocked property
         const sortedBlocks = blocksData.sort((a, b) => a.order - b.order);
@@ -78,7 +82,21 @@ function LearningPage() {
           }
           
           const prevBlock = index > 0 ? sortedBlocks[index - 1] : null;
-          const isLocked = prevBlock ? !progressData[prevBlock.id]?.completed : false;
+          
+          // בדיקה אם הבלוק הקודם הושלם
+          let isLocked = false;
+          if (prevBlock) {
+            const prevBlockProgress = progressData[prevBlock.id];
+            if (!prevBlockProgress || !prevBlockProgress.completed) {
+              isLocked = true;
+            }
+            // אם הבלוק הקודם הוא בוחן, צריך גם לעבור אותו (ציון מעל 70)
+            else if (prevBlock.type === 'quiz' && prevBlockProgress.score < 70 && !prevBlockProgress.passed) {
+              // אם זה בוחן שלא עבר, הבלוק הבא נשאר נעול
+              isLocked = true;
+            }
+          }
+          
           return { ...block, isLocked };
         });
 
@@ -117,17 +135,33 @@ function LearningPage() {
   const handleConfirmStart = async () => {
     setStartingBlock(true);
     try {
-      // Create or update progress
+      // ניסיון חדש לכתיבה לפיירבייס עם הגדרות משופרות
       if (!progress[selectedBlock.id]) {
-        const progressRef = collection(db, 'progress');
-        await addDoc(progressRef, {
-          userId: user.id,
-          blockId: selectedBlock.id,
-          started: true,
-          completed: false,
-          startedAt: Timestamp.now(),
-          lastAccessedAt: Timestamp.now()
-        });
+        try {
+          console.log('Attempting to write to progress collection...');
+          console.log('User ID:', user.id);
+          console.log('Block ID:', selectedBlock.id);
+          
+          // יצירת אובייקט הנתונים
+          const progressData = {
+            userId: user.id,
+            blockId: selectedBlock.id,
+            started: true,
+            completed: false,
+            startedAt: Timestamp.now(),
+            lastAccessedAt: Timestamp.now()
+          };
+          
+          // יצירת הפניה לאוסף
+          const progressRef = collection(db, 'progress');
+          
+          // ניסיון כתיבה לאוסף
+          const docRef = await addDoc(progressRef, progressData);
+          console.log('Document written with ID:', docRef.id);
+        } catch (error) {
+          console.error('Error writing to progress collection:', error);
+          // ממשיכים למרות השגיאה כדי לאפשר למשתמש לצפות בתוכן
+        }
       }
 
       // Navigate based on block type
@@ -172,21 +206,28 @@ function LearningPage() {
   };
 
   const getBlockStatus = (block) => {
-    if (block.isLocked) return { label: 'נעול', color: 'error' };
+    if (block.isLocked) return { label: t('learning.status.locked'), color: 'error' };
     const blockProgress = progress[block.id];
-    if (!blockProgress) return { label: 'לא התחיל', color: 'default' };
-    if (blockProgress.completed) return { label: 'הושלם', color: 'success' };
-    return { label: 'בתהליך', color: 'info' };
+    if (!blockProgress) return { label: t('learning.status.available'), color: 'default' };
+    
+    // Check if it's a completed quiz but failed
+    if (blockProgress.completed && block.type === 'quiz') {
+      // If there's a passed field and it's false, the quiz was failed
+      if (blockProgress.passed === false) {
+        return { label: t('learning.status.failed'), color: 'warning' };
+      }
+      // If the score is less than 70 and there's no passed field
+      if (blockProgress.score < 70 && blockProgress.passed === undefined) {
+        return { label: t('learning.status.failed'), color: 'warning' };
+      }
+    }
+    
+    if (blockProgress.completed) return { label: t('learning.status.completed'), color: 'success' };
+    return { label: t('learning.status.inProgress'), color: 'info' };
   };
 
   const getBlockDescription = (block) => {
-    const descriptions = {
-      video: 'צפייה בהדרכה מוקלטת',
-      quiz: 'בוחן ידע אינטראקטיבי',
-      simulation: 'תרגול והתנסות מעשית',
-      default: 'חומר לימוד'
-    };
-    return descriptions[block.type] || descriptions.default;
+    return t(`learning.types.${block.type}`) || t('learning.types.default');
   };
 
   if (loading) {
@@ -202,16 +243,27 @@ function LearningPage() {
   return (
     <Layout>
       <Container>
-        <Typography variant="h4" gutterBottom align="center">
-          בלוקי למידה
-        </Typography>
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <Typography variant="h4" gutterBottom align="center">
+            {t('learning.title')}
+          </Typography>
+        </motion.div>
 
         <Grid container spacing={3}>
-          {blocks.map((block) => {
+          {blocks.map((block, index) => {
             const status = getBlockStatus(block);
             return (
               <Grid item xs={12} sm={6} md={4} key={block.id}>
-                <Card
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1, duration: 0.5 }}
+                >
+                <AnimatedCard
                   sx={{
                     position: 'relative',
                     opacity: block.isLocked ? 0.7 : 1,
@@ -247,7 +299,7 @@ function LearningPage() {
                       />
                       {progress[block.id]?.startedAt && (
                         <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary' }}>
-                          התחלת: {new Date(progress[block.id].startedAt.toDate()).toLocaleDateString()}
+                          {t('learning.start')}: {new Date(progress[block.id].startedAt.toDate()).toLocaleDateString()}
                         </Typography>
                       )}
                     </Box>
@@ -258,12 +310,12 @@ function LearningPage() {
 
                     {block.estimatedTime && (
                       <Typography variant="caption" color="text.secondary">
-                        זמן משוער: {block.estimatedTime} דקות
+                        {t('learning.estimatedTime')}: {block.estimatedTime} {t('learning.minutes')}
                       </Typography>
                     )}
                   </CardContent>
                   <CardActions>
-                    <Button
+                    <AnimatedButton
                       size="small"
                       color="primary"
                       startIcon={block.isLocked ? <LockIcon /> : <PlayIcon />}
@@ -271,37 +323,38 @@ function LearningPage() {
                       onClick={() => handleStartBlock(block)}
                       disabled={block.isLocked}
                     >
-                      {progress[block.id]?.completed ? 'צפה שוב' : 'התחל'}
-                    </Button>
+                      {progress[block.id]?.completed ? t('learning.viewAgain') : t('learning.start')}
+                    </AnimatedButton>
                   </CardActions>
-                </Card>
+                </AnimatedCard>
+                </motion.div>
               </Grid>
             );
           })}
         </Grid>
 
         <Dialog open={dialogOpen} onClose={() => !startingBlock && setDialogOpen(false)}>
-          <DialogTitle>התחלת בלוק למידה</DialogTitle>
+          <DialogTitle>{t('learning.startBlock')}</DialogTitle>
           <DialogContent>
             {selectedBlock && (
               <Typography>
-                האם להתחיל את הבלוק "{selectedBlock.title}"?
+                {t('learning.confirmStart')} "{selectedBlock.title}"?
               </Typography>
             )}
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setDialogOpen(false)} disabled={startingBlock}>
-              ביטול
-            </Button>
-            <Button
+            <AnimatedButton onClick={() => setDialogOpen(false)} disabled={startingBlock}>
+              {t('common.cancel')}
+            </AnimatedButton>
+            <AnimatedButton
               onClick={handleConfirmStart}
               variant="contained"
               color="primary"
               disabled={startingBlock}
               startIcon={startingBlock ? <CircularProgress size={20} /> : undefined}
             >
-              {startingBlock ? 'מתחיל...' : 'התחל'}
-            </Button>
+              {startingBlock ? t('learning.starting') : t('learning.start')}
+            </AnimatedButton>
           </DialogActions>
         </Dialog>
       </Container>
