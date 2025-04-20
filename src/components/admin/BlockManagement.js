@@ -1,15 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { phishingScenarios } from '../../data/phishingScenarios';
 import {
   Box,
-  Alert,
   Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
+
   Table,
   TableBody,
   TableCell,
@@ -20,13 +14,8 @@ import {
   IconButton,
   Typography,
   Tooltip,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   Chip,
   Stack,
-  Autocomplete
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -37,6 +26,7 @@ import {
 } from '@mui/icons-material';
 import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase/config';
+import QuizEditor from './QuizEditor';
 
 function BlockManagement() {
   const navigate = useNavigate();
@@ -46,6 +36,13 @@ function BlockManagement() {
   
   // מצב עורך המבחנים במסך מלא
   const [quizEditorOpen, setQuizEditorOpen] = useState(false);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    order: 0,
+    questions: []
+  });
 
   // טעינת בלוקים וחומרי לימוד
   const fetchData = async () => {
