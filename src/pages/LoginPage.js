@@ -15,6 +15,7 @@ import { useUser } from '../context/UserContext';
 
 function LoginPage() {
   const [personalCode, setPersonalCode] = useState('');
+  const [employeeCode, setEmployeeCode] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -55,7 +56,7 @@ function LoginPage() {
             ברוכים הבאים ללומדה
           </Typography>
           <Typography variant="h6" gutterBottom align="center">
-            אנא הזן את הקוד האישי שלך
+            אנא הזן מספר עובד וקוד אישי שלך
           </Typography>
           
           <form onSubmit={handleLogin}>
@@ -67,7 +68,15 @@ function LoginPage() {
               value={personalCode}
               onChange={(e) => setPersonalCode(e.target.value)}
               autoFocus
-              inputProps={{ dir: 'ltr' }}
+            />
+                        <TextField
+              fullWidth
+              label="מספר עובד"
+              variant="outlined"
+              margin="normal"
+              value={employeeCode}
+              onChange={(e) => setEmployeeCode(e.target.value)}
+              autoFocus
             />
             
             {error && (

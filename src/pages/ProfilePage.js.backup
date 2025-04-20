@@ -1,0 +1,560 @@
+import React, { useState, useCallback, useEffect } from 'react';
+import {
+  Container,
+  Typography,
+  Card,
+  CardContent,
+  Grid,
+  LinearProgress,
+  Button,
+  Box,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Alert,
+  Chip,
+  Select,
+  MenuItem,
+  FormControl,
+  IconButton,
+  TextField
+} from '@mui/material';
+import {
+  Person as PersonIcon,
+  Email as EmailIcon,
+  Business as BusinessIcon,
+  AccessTime as AccessTimeIcon,
+  Language as LanguageIcon,
+  EmojiEvents as AchievementIcon,
+  Grade as GradeIcon
+} from '@mui/icons-material';
+import { useUser } from '../context/UserContext';
+import { db } from '../firebase/config';
+import { collection, query, where, getDocs, writeBatch, serverTimestamp, doc, getDoc } from 'firebase/firestore';
+import Layout from '../components/Layout';
+
+function ProfilePage() {
+
+  const { user, loading } = useUser();
+  const [departments, setDepartments] = useState([]);
+  
+  // State for progress data
+  const [progressData, setProgressData] = useState({
+    totalBlocks: 0,
+    completedBlocks: 0,
+    progressPercentage: 0
+  });
+
+  // State for achievements and tests
+  const [achievements, setAchievements] = useState([]);
+  const [recentTests, setRecentTests] = useState([]);
+  
+  // State for additional statistics
+  const [userStats, setUserStats] = useState({
+    totalTimeSpent: 0,        // Total time spent in minutes
+    averageScore: 0,          // Average score across all quizzes
+    bestScore: 0,             // Best score achieved
+    quizzesTaken: 0,          // Total number of quizzes taken
+    lastActive: null,         // Last activity date
+    strongestCategory: '',    // Category with best performance
+    weakestCategory: ''       // Category that needs improvement
+  });
+
+
+
+
+
+  // Language is now handled by the LanguageContext
+
+
+
+  // Fetch departments
+  const fetchDepartments = async () => {
+    try {
+      const departmentsRef = collection(db, 'departments');
+      const snapshot = await getDocs(departmentsRef);
+      const departmentsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setDepartments(departmentsData);
+    } catch (error) {
+      console.error('Error fetching departments:', error);
+    }
+  };
+
+  // Fetch progress data
+  const fetchProgressData = useCallback(async () => {
+    if (!user?.id) return;
+    
+    try {
+      // Get all blocks
+      const blocksRef = collection(db, 'blocks');
+      const blocksSnap = await getDocs(blocksRef);
+      const totalBlocks = blocksSnap.size;
+      
+      // Get user's completed blocks from progress collection
+      const progressRef = collection(db, 'progress');
+      const progressQuery = query(progressRef, where('userId', '==', user.id), where('completed', '==', true));
+      const progressSnap = await getDocs(progressQuery);
+      
+      // Get user's completed blocks from quizResults collection
+      const quizResultsRef = collection(db, 'quizResults');
+      const quizResultsQuery = query(quizResultsRef, where('userId', '==', user.id), where('passed', '==', true));
+      const quizResultsSnap = await getDocs(quizResultsQuery);
+      
+      // סינון כפילויות - רק בלוק אחד לכל blockId
+      const uniqueBlockIds = new Set();
+      
+      // הוסף בלוקים מושלמים מטבלת progress
+      progressSnap.docs.forEach(doc => {
+        const data = doc.data();
+        uniqueBlockIds.add(data.blockId);
+      });
+      
+      // הוסף בלוקים מושלמים מטבלת quizResults
+      quizResultsSnap.docs.forEach(doc => {
+        const data = doc.data();
+        uniqueBlockIds.add(data.blockId);
+      });
+      
+      const completedBlocks = uniqueBlockIds.size;
+      
+      // Calculate percentage
+      const progressPercentage = totalBlocks > 0 ? (completedBlocks / totalBlocks) * 100 : 0;
+      
+      setProgressData({
+        totalBlocks,
+        completedBlocks,
+        progressPercentage
+      });
+      
+      console.log('Progress data updated:', { totalBlocks, completedBlocks, progressPercentage });
+    } catch (error) {
+      console.error('Error fetching progress data:', error);
+    }
+  }, [user?.id]);
+
+  // Fetch completed blocks
+  const fetchCompletedBlocks = useCallback(async () => {
+    if (!user?.id) return;
+    
+    try {
+      // Get all blocks first
+      const blocksRef = collection(db, 'blocks');
+      const blocksSnap = await getDocs(blocksRef);
+      const allBlocks = blocksSnap.docs.reduce((acc, doc) => {
+        acc[doc.id] = { id: doc.id, ...doc.data() };
+        return acc;
+      }, {});
+      
+      // Get user's completed blocks from progress collection
+      const progressRef = collection(db, 'progress');
+      const progressSnap = await getDocs(query(
+        progressRef, 
+        where('userId', '==', user.id),
+        where('completed', '==', true)
+      ));
+      
+      // Get user's completed blocks from quizResults collection
+      const quizResultsRef = collection(db, 'quizResults');
+      const quizResultsSnap = await getDocs(query(
+        quizResultsRef, 
+        where('userId', '==', user.id),
+        where('passed', '==', true)
+      ));
+      
+      // Map completed blocks from progress with their details
+      const progressBlocks = progressSnap.docs
+        .map(doc => {
+          const progress = doc.data();
+          const block = allBlocks[progress.blockId];
+          if (!block) return null;
+          
+          return {
+            id: progress.blockId,
+            name: block.title || 'בלוק לימוד',
+            description: block.description || 'הושלם בהצלחה',
+            completedAt: progress.completedAt ? 
+              (progress.completedAt.toDate ? progress.completedAt.toDate() : new Date(progress.completedAt)) : 
+              new Date(),
+            score: progress.score || 0,
+            type: block.type || 'unknown',
+            source: 'progress'
+          };
+        })
+        .filter(block => block !== null);
+        
+      // Map completed blocks from quizResults with their details
+      const quizBlocks = quizResultsSnap.docs
+        .map(doc => {
+          const result = doc.data();
+          const block = allBlocks[result.blockId];
+          if (!block) return null;
+          
+          return {
+            id: result.blockId,
+            name: block.title || 'מבחן',
+            description: 'הושלם בהצלחה עם ציון ' + Math.round(result.score) + '%',
+            completedAt: result.completedAt ? 
+              (result.completedAt.toDate ? result.completedAt.toDate() : new Date(result.completedAt)) : 
+              new Date(),
+            score: result.score || 0,
+            type: 'quiz',
+            source: 'quizResults'
+          };
+        })
+        .filter(block => block !== null);
+      
+      // Combine both sources and remove duplicates (prefer quizResults if both exist)
+      const blockMap = {};
+      
+      // Add progress blocks first
+      progressBlocks.forEach(block => {
+        blockMap[block.id] = block;
+      });
+      
+      // Override with quizResults blocks if they exist (they have more accurate data)
+      quizBlocks.forEach(block => {
+        blockMap[block.id] = block;
+      });
+      
+      // Convert back to array and sort
+      const combinedBlocks = Object.values(blockMap)
+        .sort((a, b) => b.completedAt - a.completedAt);
+      
+      console.log('Combined completed blocks:', combinedBlocks);
+      setAchievements(combinedBlocks);
+    } catch (error) {
+      console.error('Error fetching completed blocks:', error);
+    }
+  }, [user?.id]);
+
+  // Fetch recent completed blocks with scores
+  const fetchRecentTests = useCallback(async () => {
+    if (!user?.id) return;
+    
+    try {
+      // Get all blocks first for reference
+      const blocksRef = collection(db, 'blocks');
+      const blocksSnap = await getDocs(blocksRef);
+      const blocks = blocksSnap.docs.reduce((acc, doc) => {
+        acc[doc.id] = { id: doc.id, ...doc.data() };
+        return acc;
+      }, {});
+      
+      // Get user's completed blocks with scores from progress
+      const progressRef = collection(db, 'progress');
+      const progressQuery = query(
+        progressRef, 
+        where('userId', '==', user.id),
+        where('completed', '==', true)
+      );
+      const progressSnap = await getDocs(progressQuery);
+      const completedProgress = progressSnap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        source: 'progress'
+      }));
+      
+      // Get user's quiz results
+      const quizResultsRef = collection(db, 'quizResults');
+      const quizResultsQuery = query(
+        quizResultsRef, 
+        where('userId', '==', user.id)
+      );
+      const quizResultsSnap = await getDocs(quizResultsQuery);
+      const quizResults = quizResultsSnap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        source: 'quizResults'
+      }));
+      
+      // Combine both sources
+      const allResults = [...completedProgress, ...quizResults];
+      
+      // Combine with block details
+      const tests = allResults
+        .map(result => {
+          const block = blocks[result.blockId];
+          if (!block) return null;
+          
+          // Format date
+          const completedDate = result.completedAt ? 
+            (result.completedAt.toDate ? result.completedAt.toDate() : new Date(result.completedAt)) : 
+            new Date();
+          
+          return {
+            id: result.id,
+            blockId: result.blockId,
+            title: block.title || 'לומדה',
+            type: block.type || 'unknown',
+            score: result.score !== undefined ? Math.round(result.score) : '-',
+            hasScore: result.score !== undefined,
+            passed: result.passed === true || (result.score !== undefined && result.score >= 70),
+            date: completedDate.toISOString().split('T')[0],
+            timestamp: completedDate.getTime(),
+            source: result.source
+          };
+        })
+        .filter(test => test !== null);
+      
+      // Remove duplicates (prefer quizResults if both exist for the same blockId)
+      const uniqueTests = {};
+      tests.forEach(test => {
+        const existingTest = uniqueTests[test.blockId];
+        
+        // If no existing test or this one is from quizResults or it's newer
+        if (!existingTest || 
+            (test.source === 'quizResults' && existingTest.source !== 'quizResults') ||
+            (test.timestamp > existingTest.timestamp)) {
+          uniqueTests[test.blockId] = test;
+        }
+      });
+      
+      // Sort by date (newest first) and take the 5 most recent
+      const sortedTests = Object.values(uniqueTests)
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .slice(0, 5);
+      
+      console.log('Recent tests:', sortedTests);
+      setRecentTests(sortedTests);
+    } catch (error) {
+      console.error('Error fetching recent tests:', error);
+    }
+  }, [user?.id]);
+
+  // בדיקת הרשאות אדמין
+  const checkAdminStatus = useCallback(async () => {
+    if (!user?.id) return;
+    
+    try {
+      const userDocRef = doc(db, 'users', user.id);
+      const userDoc = await getDoc(userDocRef);
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        console.log('User data:', userData);
+        console.log('Is admin?', userData.role === 'admin');
+        
+        // הצגת הודעה למשתמש
+        if (userData.role === 'admin') {
+          alert('יש לך הרשאות אדמין!');
+        } else {
+          alert('אין לך הרשאות אדמין. תפקיד נוכחי: ' + (userData.role || 'לא מוגדר'));
+        }
+      } else {
+        console.log('User document does not exist');
+        alert('המשתמש שלך לא קיים באוסף users');
+      }
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+      alert('שגיאה בבדיקת הרשאות: ' + error.message);
+    }
+  }, [user?.id]);
+
+  // Load data on mount
+  useEffect(() => {
+    fetchDepartments();
+  }, []);
+
+
+
+  // Fetch additional user statistics
+  const fetchUserStatistics = useCallback(async () => {
+    if (!user?.id) return;
+    
+    try {
+      // Get quiz results for statistics
+      const quizResultsRef = collection(db, 'quizResults');
+      const quizResultsQuery = query(quizResultsRef, where('userId', '==', user.id));
+      const quizResultsSnap = await getDocs(quizResultsQuery);
+      
+      // Get progress data for time spent
+      const progressRef = collection(db, 'progress');
+      const progressQuery = query(progressRef, where('userId', '==', user.id));
+      const progressSnap = await getDocs(progressQuery);
+      
+      // Calculate statistics
+      let totalScore = 0;
+      let bestScore = 0;
+      let quizzesTaken = 0;
+      let lastActive = null;
+      let totalTimeSpent = 0;
+      
+      // Category performance tracking
+      const categoryScores = {};
+      
+      // Process quiz results
+      quizResultsSnap.docs.forEach(doc => {
+        const result = doc.data();
+        
+        if (result.score !== undefined) {
+          totalScore += result.score;
+          bestScore = Math.max(bestScore, result.score);
+          quizzesTaken++;
+          
+          // Track last activity
+          const completedAt = result.completedAt ? 
+            (result.completedAt.toDate ? result.completedAt.toDate() : new Date(result.completedAt)) : 
+            null;
+            
+          if (completedAt && (!lastActive || completedAt > lastActive)) {
+            lastActive = completedAt;
+          }
+          
+          // Track category performance if available
+          if (result.category) {
+            if (!categoryScores[result.category]) {
+              categoryScores[result.category] = { total: 0, count: 0 };
+            }
+            categoryScores[result.category].total += result.score;
+            categoryScores[result.category].count++;
+          }
+        }
+      });
+      
+      // Process progress data for time spent
+      progressSnap.docs.forEach(doc => {
+        const progress = doc.data();
+        if (progress.timeSpent) {
+          totalTimeSpent += progress.timeSpent;
+        }
+      });
+      
+      // Calculate average score
+      const averageScore = quizzesTaken > 0 ? Math.round(totalScore / quizzesTaken) : 0;
+      
+      // Find strongest and weakest categories
+      let strongestCategory = '';
+      let weakestCategory = '';
+      let highestAvg = 0;
+      let lowestAvg = 100;
+      
+      Object.entries(categoryScores).forEach(([category, data]) => {
+        const avgScore = data.count > 0 ? data.total / data.count : 0;
+        
+        if (avgScore > highestAvg) {
+          highestAvg = avgScore;
+          strongestCategory = category;
+        }
+        
+        if (avgScore < lowestAvg && data.count > 0) {
+          lowestAvg = avgScore;
+          weakestCategory = category;
+        }
+      });
+      
+      // Update user stats
+      setUserStats({
+        totalTimeSpent: Math.round(totalTimeSpent / 60), // Convert to minutes
+        averageScore,
+        bestScore: Math.round(bestScore),
+        quizzesTaken,
+        lastActive,
+        strongestCategory,
+        weakestCategory
+      });
+      
+      console.log('User statistics updated:', { 
+        totalTimeSpent: Math.round(totalTimeSpent / 60),
+        averageScore,
+        bestScore,
+        quizzesTaken,
+        lastActive,
+        strongestCategory,
+        weakestCategory
+      });
+      
+    } catch (error) {
+      console.error('Error fetching user statistics:', error);
+    }
+  }, [user?.id]);
+
+  // Fetch all data when user changes
+  useEffect(() => {
+    if (user?.id) {
+      fetchProgressData();
+      fetchCompletedBlocks();
+      fetchRecentTests();
+      fetchUserStatistics();
+    }
+  }, [user?.id, fetchProgressData, fetchCompletedBlocks, fetchRecentTests, fetchUserStatistics]);
+
+  return (
+    <Layout>
+      <Container>
+
+
+        <Grid container justifyContent="center">
+          <Grid item xs={12} md={8}>
+            <Card sx={{ p: 3, bgcolor: 'background.paper', boxShadow: 3 }}>
+              <CardContent>
+{{ ... }}
+                                <Box component="span" sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, mt: 0.5 }}>
+                                  {test.hasScore && (
+                                    <Chip 
+                                      size="small" 
+                                      label={`ציון: ${test.score}%`} 
+                  <Avatar
+                    sx={{ width: 100, height: 100, mb: 2, bgcolor: 'primary.main' }}
+                  >
+                    {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                  </Avatar>
+                  
+                  <Typography variant="h5" component="div" gutterBottom>
+                    {user?.name || 'משתמש'}
+                  </Typography>
+                  
+                  <Typography variant="body1" color="text.secondary" gutterBottom>
+                    {user?.department ? 
+                      departments.find(d => d.id === user.department)?.name || user.department 
+                      : 'לא צוינה מחלקה'}
+                  </Typography>
+                                </Box>
+                              }
+                              sx={{ ml: 'auto' }}
+                            />
+                            <ListItemIcon>
+{{ ... }}
+                                <GradeIcon sx={{ 
+                                  color: test.score >= 90 ? '#4caf50' : 
+                                         test.score >= 70 ? '#2196f3' : 
+                                         '#ff9800',
+                                  fontSize: 28
+                                }} />
+                              ) : (
+                                <AchievementIcon sx={{ color: '#4caf50', direction: 'right' }} />
+                              )}
+                            </ListItemIcon>
+                          </ListItem>
+                          {test !== recentTests[recentTests.length - 1] && <Divider component="li" />}
+                        </React.Fragment>
+                      ))
+                    ) : (
+                      <ListItem>
+                        <Typography variant="body2" color="text.secondary">
+                          אין פעילות להצגה
+                        </Typography>
+                      </ListItem>
+                    )}
+                  </List>
+                </Box>
+
+
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      </Container>
+    </Layout>
+  );
+}
+
+export default ProfilePage;

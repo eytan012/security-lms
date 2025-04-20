@@ -1,12 +1,13 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { CssBaseline } from '@mui/material';
+import { ThemeProvider } from '@mui/material/styles';
+import { theme, cacheRtl } from './theme/theme';
+import { CacheProvider } from '@emotion/react';
 import { AnimatePresence } from 'framer-motion';
 
-// Language Provider
-import { LanguageProvider } from './context/LanguageContext';
 
 // Components
-import PageTransition from './components/PageTransition';
+
 
 // Context
 import { UserProvider } from './context/UserContext';
@@ -24,8 +25,8 @@ import QuizPage from './pages/content/QuizPage';
 import SimulationPage from './pages/content/SimulationPage';
 import DocumentPage from './pages/content/DocumentPage';
 import AdminPage from './pages/AdminPage';
+import BlockEditorPage from './pages/admin/BlockEditorPage';
 
-// Theme is now managed by LanguageProvider
 
 // Wrapper component for AnimatePresence
 const AnimatedRoutes = () => {
@@ -34,12 +35,12 @@ const AnimatedRoutes = () => {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        <Route path="/login" element={<PageTransition><LoginPage /></PageTransition>} />
+        <Route path="/login" element={<LoginPage />} />
         <Route
           path="/profile"
           element={
             <ProtectedRoute>
-              <PageTransition><ProfilePage /></PageTransition>
+              <ProfilePage />
             </ProtectedRoute>
           }
         />
@@ -47,7 +48,7 @@ const AnimatedRoutes = () => {
           path="/learning"
           element={
             <ProtectedRoute>
-              <PageTransition><LearningPage /></PageTransition>
+              <LearningPage />
             </ProtectedRoute>
           }
         />
@@ -58,7 +59,7 @@ const AnimatedRoutes = () => {
           path="/statistics"
           element={
             <ProtectedRoute>
-              <PageTransition><StatisticsPage /></PageTransition>
+              <StatisticsPage />
             </ProtectedRoute>
           }
         />
@@ -66,7 +67,7 @@ const AnimatedRoutes = () => {
           path="/video/:blockId"
           element={
             <ProtectedRoute>
-              <PageTransition><VideoPage /></PageTransition>
+              <VideoPage />
             </ProtectedRoute>
           }
         />
@@ -74,7 +75,7 @@ const AnimatedRoutes = () => {
           path="/material/:blockId"
           element={
             <ProtectedRoute>
-              <PageTransition><DocumentPage /></PageTransition>
+              <DocumentPage />
             </ProtectedRoute>
           }
         />
@@ -82,7 +83,7 @@ const AnimatedRoutes = () => {
           path="/quiz/:blockId"
           element={
             <ProtectedRoute>
-              <PageTransition><QuizPage /></PageTransition>
+              <QuizPage />
             </ProtectedRoute>
           }
         />
@@ -90,7 +91,7 @@ const AnimatedRoutes = () => {
           path="/simulation/:blockId"
           element={
             <ProtectedRoute>
-              <PageTransition><SimulationPage /></PageTransition>
+              <SimulationPage />
             </ProtectedRoute>
           }
         />
@@ -98,7 +99,15 @@ const AnimatedRoutes = () => {
           path="/admin"
           element={
             <AdminRoute>
-              <PageTransition><AdminPage /></PageTransition>
+              <AdminPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/admin/block/:blockId"
+          element={
+            <AdminRoute>
+              <BlockEditorPage />
             </AdminRoute>
           }
         />
@@ -111,12 +120,14 @@ const AnimatedRoutes = () => {
 function App() {
   return (
     <Router>
-      <LanguageProvider>
-        <CssBaseline />
-        <UserProvider>
-          <AnimatedRoutes />
-        </UserProvider>
-      </LanguageProvider>
+      <CacheProvider value={cacheRtl}>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <UserProvider>
+            <AnimatedRoutes />
+          </UserProvider>
+        </ThemeProvider>
+      </CacheProvider>
     </Router>
   );
 }
