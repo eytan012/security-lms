@@ -18,7 +18,7 @@ export function useAuth() {
       const querySnapshot = await getDocs(q);
 
       if (querySnapshot.empty) {
-        throw new Error(`קוד אישי ${personalCode} לא נמצא`);
+        throw new Error(`קוד אישי ${personalCode} שגוי`); 
       }
 
       const userDoc = querySnapshot.docs[0];

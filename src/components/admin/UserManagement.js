@@ -36,6 +36,7 @@ function UserManagement() {
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [formData, setFormData] = useState({
+    employeeId: '',
     name: '',
     email: '',
     role: 'student',
@@ -51,10 +52,14 @@ function UserManagement() {
     try {
       const usersRef = collection(db, 'users');
       const snapshot = await getDocs(usersRef);
-      const usersData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const usersData = snapshot.docs.map(doc => {
+        const userData = {
+          id: doc.id,
+          ...doc.data()
+        };
+        return userData;
+      });
+      console.log('Fetched users data:', usersData);
       setUsers(usersData);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -84,8 +89,35 @@ function UserManagement() {
 
   const handleOpenDialog = (user = null) => {
     if (user) {
+      console.log('User data for editing:', user);
+      
+      // בדיקה אם שדה מספר עובד קיים בשם אחר
+      // קודם כל מנסים לקחת מ-employeeId, אחרת מ-personalCode
+      let employeeIdValue = '';
+      if (user.employeeId) {
+        employeeIdValue = user.employeeId;
+      } else if (user.personalCode) {
+        employeeIdValue = user.personalCode;
+      }
+      
       setSelectedUser(user);
       setFormData({
+        employeeId: employeeIdValue,
+        name: user.name || '',
+        email: user.email || '',
+        role: user.role || 'student',
+        department: user.department || '',
+        // שומרים על שדות נוספים מהאובייקט המקורי
+        displayName: user.displayName || user.name || '',
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+        lastLoginAt: user.lastLoginAt,
+        personalCode: user.personalCode || employeeIdValue
+      });
+      
+      console.log('Form data after setting:', {
+        employeeId: employeeIdValue,
+        personalCode: user.personalCode || employeeIdValue,
         name: user.name || '',
         email: user.email || '',
         role: user.role || 'student',
@@ -94,6 +126,7 @@ function UserManagement() {
     } else {
       setSelectedUser(null);
       setFormData({
+        employeeId: '',
         name: '',
         email: '',
         role: 'student',
@@ -120,11 +153,21 @@ function UserManagement() {
     try {
       // Ensure all form values are defined
       const cleanFormData = {
+        employeeId: formData.employeeId || '',
+        personalCode: formData.employeeId || '', // שמירת מספר העובד גם בשדה personalCode לתאימות לאחור
         name: formData.name || '',
         email: formData.email || '',
         role: formData.role || 'student',
         department: formData.department || ''
       };
+      
+      // שמירה על שדות נוספים אם קיימים
+      if (formData.displayName) cleanFormData.displayName = formData.displayName;
+      if (formData.createdAt) cleanFormData.createdAt = formData.createdAt;
+      if (formData.updatedAt) cleanFormData.updatedAt = new Date();
+      if (formData.lastLoginAt) cleanFormData.lastLoginAt = formData.lastLoginAt;
+      
+      console.log('Saving user data:', cleanFormData);
       
       if (selectedUser) {
         // עדכון משתמש קיים
@@ -204,6 +247,13 @@ function UserManagement() {
         </DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
+            <TextField
+              name="employeeId"
+              label="מספר עובד"
+              value={formData.employeeId}
+              onChange={handleInputChange}
+              fullWidth
+            />
             <TextField
               name="name"
               label="שם"

@@ -114,6 +114,24 @@ export default function BlockEditorPage() {
   }, [blockId, navigate]);
   
   // שמירת הבלוק
+  // פונקציה להמרת URL רגיל של יוטיוב ל-URL להטמעה
+  const convertYoutubeUrl = (url) => {
+    if (!url) return url;
+    
+    // בדיקה אם ה-URL כבר בפורמט להטמעה
+    if (url.includes('/embed/')) return url;
+    
+    // המרת URL רגיל לפורמט להטמעה
+    const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/ ]{11})/i;
+    const match = url.match(regex);
+    
+    if (match && match[1]) {
+      return `https://www.youtube.com/embed/${match[1]}`;
+    }
+    
+    return url;
+  };
+
   const handleSave = async () => {
     try {
       setSaving(true);
@@ -132,14 +150,14 @@ export default function BlockEditorPage() {
         dependencies: formData.dependencies,
         order: formData.order,
         estimatedTime: formData.estimatedTime,
-        updatedAt: new Date().toISOString()
       };
-
-      // הוספת תוכן בהתאם לסוג הבלוק
+      
+      // הוספת נתונים ספציפיים לסוג הבלוק
       if (formData.type === 'quiz') {
         blockData.questions = formData.questions;
       } else if (formData.type === 'document' || formData.type === 'video') {
-        blockData.content = formData.content;
+        // המרת URL של יוטיוב לפורמט הטמעה אם זה בלוק מסוג וידאו
+        blockData.content = formData.type === 'video' ? convertYoutubeUrl(formData.content) : formData.content;
       } else if (formData.type === 'simulation') {
         blockData.simulationData = formData.simulationData;
       }
@@ -280,7 +298,8 @@ export default function BlockEditorPage() {
                 fullWidth
                 multiline={formData.type === 'document'}
                 rows={formData.type === 'document' ? 6 : 1}
-                placeholder={formData.type === 'video' ? 'הכנס קישור לסרטון' : 'הכנס את תוכן המסמך'}
+                placeholder={formData.type === 'video' ? 'הכנס קישור לסרטון (URL רגיל או להטמעה)' : 'הכנס את תוכן המסמך'}
+                helperText={formData.type === 'video' ? 'ניתן להכניס URL רגיל של יוטיוב, המערכת תמיר אותו אוטומטית לפורמט הטמעה' : ''}
               />
             ) : null}
             

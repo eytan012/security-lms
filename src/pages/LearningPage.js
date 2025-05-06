@@ -205,6 +205,9 @@ function LearningPage() {
         case 'simulation':
           navigate(`/simulation/${selectedBlock.id}`);
           break;
+        case 'phishing_simulation':
+          navigate(`/phishing-simulation/${selectedBlock.id}`);
+          break;
         case 'document':
           navigate(`/material/${selectedBlock.id}`);
           break;

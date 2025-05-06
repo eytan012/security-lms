@@ -17,7 +17,7 @@ import {
   CheckCircle as CheckCircleIcon,
   ArrowBack as ArrowBackIcon
 } from '@mui/icons-material';
-import { doc, getDoc, collection, addDoc, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc, Timestamp, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useUser } from '../../context/UserContext';
 import Layout from '../../components/Layout';
@@ -31,32 +31,89 @@ function VideoPage() {
   const [error, setError] = useState(null);
   const [completed, setCompleted] = useState(false);
   const [watched, setWatched] = useState(false);
+  const [initialized, setInitialized] = useState(false);
 
+  // הגדרת מצב התחלתי - לא צפה ולא השלים
   useEffect(() => {
-    // אם המשתמש הוא אדמין, נסמן את הסרטון כנצפה אוטומטית
-    if (user?.role === 'admin') {
-      setWatched(true);
-      setCompleted(true);
+    // איפוס המצב רק בפעם הראשונה שהקומפוננטה נטענת
+    if (!initialized) {
+      console.log('VideoPage: First initialization');
+      setWatched(false);
+      setCompleted(false);
+      setLoading(true);
+      setError(null);
+      setInitialized(true);
     }
-
-    const fetchBlock = async () => {
+  }, [initialized]);
+  
+  // טעינת נתונים נפרדת מהאיפוס
+  useEffect(() => {
+    console.log('VideoPage: Data loading effect triggered, blockId:', blockId, 'user:', user);
+    if (!initialized) return; // לא להריץ לפני האתחול
+    
+    const fetchBlockAndProgress = async () => {
+      setLoading(true);
+      console.log('VideoPage: Starting to fetch data');
       try {
+        // טעינת נתוני הבלוק
         const blockDoc = await getDoc(doc(db, 'blocks', blockId));
-        if (blockDoc.exists()) {
-          setBlock({ id: blockDoc.id, ...blockDoc.data() });
-        } else {
+        if (!blockDoc.exists()) {
+          console.log('VideoPage: Block not found');
           setError('בלוק הלמידה לא נמצא');
+          setLoading(false);
+          return;
+        }
+        
+        const blockData = { id: blockDoc.id, ...blockDoc.data() };
+        console.log('VideoPage: Block data loaded:', blockData);
+        setBlock(blockData);
+        
+        // אם המשתמש הוא אדמין, נסמן את הסרטון כנצפה אוטומטית
+        if (user?.role === 'admin') {
+          console.log('VideoPage: User is admin, marking as watched automatically');
+          setWatched(true);
+          setCompleted(true);
+          setLoading(false);
+          return;
+        }
+        
+        // בדיקה האם המשתמש כבר צפה בסרטון זה בעבר
+        if (user) {
+          console.log('VideoPage: Checking if user has watched this video before, userId:', user.id);
+          const progressQuery = query(
+            collection(db, 'progress'),
+            where('userId', '==', user.id),
+            where('blockId', '==', blockId),
+            where('type', '==', 'video'),
+            where('completed', '==', true)
+          );
+          
+          const progressSnapshot = await getDocs(progressQuery);
+          console.log('VideoPage: Progress query results:', progressSnapshot.size, 'documents found');
+          
+          if (!progressSnapshot.empty) {
+            // המשתמש כבר צפה בסרטון זה
+            console.log('VideoPage: User has already watched this video');
+            setWatched(true);
+            setCompleted(true);
+          } else {
+            console.log('VideoPage: User has NOT watched this video before');
+            setWatched(false);
+            setCompleted(false);
+          }
+        } else {
+          console.log('VideoPage: No user data available');
         }
       } catch (err) {
         setError('שגיאה בטעינת בלוק הלמידה');
-        console.error('Error fetching block:', err);
+        console.error('Error fetching block or progress:', err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchBlock();
-  }, [blockId]);
+    fetchBlockAndProgress();
+  }, [blockId, user, initialized]);
 
   const handleVideoComplete = async () => {
     try {
@@ -102,6 +159,17 @@ function VideoPage() {
       </Layout>
     );
   }
+
+  // לוג לפני הרינדור
+  console.log('VideoPage: Rendering with state:', { 
+    loading, 
+    error, 
+    completed, 
+    watched, 
+    blockId, 
+    userRole: user?.role,
+    initialized
+  });
 
   return (
     <Layout>

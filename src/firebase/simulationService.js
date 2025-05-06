@@ -19,6 +19,12 @@ const SIMULATION_STATS_COLLECTION = 'simulationStats';
 // שמירת תוצאות סימולציה של משתמש
 export const saveSimulationResult = async (userId, result) => {
   try {
+    // וידוא שיש userId תקין
+    if (!userId) {
+      console.warn('saveSimulationResult: userId is undefined or null');
+      return { success: false, error: 'No userId provided' };
+    }
+    
     const userSimRef = doc(collection(db, USER_SIMULATIONS_COLLECTION));
     
     await setDoc(userSimRef, {

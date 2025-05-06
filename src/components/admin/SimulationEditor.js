@@ -16,7 +16,13 @@ import {
 } from '@mui/material';
 import { Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
 
-const SimulationEditor = ({ data = { content: { suspicious_elements: [], correct_actions: [], wrong_actions: [], sender: {} } }, onChange = () => {} }) => {
+const SimulationEditor = ({ data = { content: { suspicious_elements: [], correct_actions: [], wrong_actions: [], sender: { name: '', email: '' } } }, onChange = () => {} }) => {
+  // וידוא שהאובייקט sender קיים
+  if (!data.content) data.content = {};
+  if (!data.content.sender) data.content.sender = { name: '', email: '' };
+  if (!data.content.suspicious_elements) data.content.suspicious_elements = [];
+  if (!data.content.correct_actions) data.content.correct_actions = [];
+  if (!data.content.wrong_actions) data.content.wrong_actions = [];
   const handleChange = (field, value) => {
     onChange({
       ...data,

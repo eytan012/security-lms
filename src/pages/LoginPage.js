@@ -60,6 +60,15 @@ function LoginPage() {
           </Typography>
           
           <form onSubmit={handleLogin}>
+          <TextField
+              fullWidth
+              label="מספר עובד"
+              variant="outlined"
+              margin="normal"
+              value={employeeCode}
+              onChange={(e) => setEmployeeCode(e.target.value)}
+              autoFocus
+            />
             <TextField
               fullWidth
               label="קוד אישי"
@@ -69,15 +78,7 @@ function LoginPage() {
               onChange={(e) => setPersonalCode(e.target.value)}
               autoFocus
             />
-                        <TextField
-              fullWidth
-              label="מספר עובד"
-              variant="outlined"
-              margin="normal"
-              value={employeeCode}
-              onChange={(e) => setEmployeeCode(e.target.value)}
-              autoFocus
-            />
+
             
             {error && (
               <Alert severity="error" sx={{ mt: 2 }}>

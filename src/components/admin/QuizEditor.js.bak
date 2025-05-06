@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import {
   Box,
   Button,
@@ -41,6 +41,7 @@ import {
 } from '@mui/icons-material';
 import Layout from '../Layout';
 import { useUser } from '../../context/UserContext';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { CacheProvider } from '@emotion/react';
 import createCache from '@emotion/cache';
 import rtlPlugin from 'stylis-plugin-rtl';
@@ -200,16 +201,15 @@ export default function QuizEditor({ initialQuestions = [], onSave, blockId, blo
       alert('נא להזין טקסט לשאלה');
       return;
     }
-    
+
     // וידוא שיש לפחות 2 אפשרויות תשובה
     const validOptions = editForm.options.filter(opt => opt.trim());
     if (validOptions.length < 2) {
       alert('נא להזין לפחות 2 אפשרויות תשובה');
       return;
     }
-    
-    // עדכון או הוספת שאלה
-    const newQuestions = [...questions];
+
+    let newQuestions = [...questions];
     if (selectedIdx !== null) {
       newQuestions[selectedIdx] = { ...editForm };
     } else {
@@ -225,9 +225,7 @@ export default function QuizEditor({ initialQuestions = [], onSave, blockId, blo
   const handleSaveBlockOrder = async () => {
     if (blockId && blockId !== 'new') {
       try {
-        await updateDoc(doc(db, 'blocks', blockId), {
-          order: blockOrder
-        });
+        await updateDoc(doc(db, 'blocks', blockId), { order: blockOrder });
         alert('סדר הבלוק נשמר בהצלחה');
       } catch (error) {
         console.error('Error saving block order:', error);
@@ -239,16 +237,16 @@ export default function QuizEditor({ initialQuestions = [], onSave, blockId, blo
   // ייצוא/ייבוא שאלות
   const handleExportQuestions = () => {
     try {
-      // יצירת קובץ JSON להורדה
-      const dataStr = JSON.stringify(questions, null, 2);
-      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+      const data = JSON.stringify(questions, null, 2);
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
       
-      const exportFileDefaultName = 'quiz_questions.json';
-      
-      const linkElement = document.createElement('a');
-      linkElement.setAttribute('href', dataUri);
-      linkElement.setAttribute('download', exportFileDefaultName);
-      linkElement.click();
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `quiz-${blockId || 'new'}-${new Date().getTime()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     } catch (error) {
       console.error('Error exporting questions:', error);
       alert('שגיאה בייצוא השאלות');
@@ -258,42 +256,32 @@ export default function QuizEditor({ initialQuestions = [], onSave, blockId, blo
   const handleImportQuestions = (event) => {
     const file = event.target.files[0];
     if (!file) return;
-    
+
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const importedQuestions = JSON.parse(e.target.result);
+        const importedData = JSON.parse(e.target.result);
         
-        // וידוא שהמבנה תקין
-        if (!Array.isArray(importedQuestions)) {
-          throw new Error('פורמט לא תקין - לא מערך');
+        if (!Array.isArray(importedData)) {
+          throw new Error('מבנה קובץ לא תקין');
         }
         
-        // בדיקת תקינות כל שאלה
-        const validQuestions = importedQuestions.filter(q => 
-          q.text && 
-          Array.isArray(q.options) && 
-          q.options.length >= 2 &&
-          typeof q.correctAnswer === 'number' &&
-          q.correctAnswer >= 0 && 
-          q.correctAnswer < q.options.length
-        );
-        
-        setQuestions(validQuestions);
-        if (validQuestions.length > 0) {
+        setQuestions(importedData);
+        if (importedData.length > 0) {
           setSelectedIdx(0);
-          setEditForm(validQuestions[0]);
+          setEditForm(importedData[0]);
         }
         
-        if (onSave) onSave(validQuestions);
-        
-        alert(`יובאו ${validQuestions.length} שאלות בהצלחה`);
+        if (onSave) onSave(importedData);
       } catch (error) {
         console.error('Error importing questions:', error);
-        alert('שגיאה בייבוא השאלות - פורמט לא תקין');
+        alert('שגיאה בייבוא השאלות: מבנה קובץ לא תקין');
       }
     };
     reader.readAsText(file);
+    
+    // איפוס שדה הקלט
+    event.target.value = null;
   };
 
   // שכפול שאלה
@@ -306,6 +294,7 @@ export default function QuizEditor({ initialQuestions = [], onSave, blockId, blo
     
     setQuestions(newQuestions);
     setSelectedIdx(selectedIdx + 1);
+    setEditForm(duplicatedQuestion);
     
     if (onSave) onSave(newQuestions);
   };
@@ -316,67 +305,44 @@ export default function QuizEditor({ initialQuestions = [], onSave, blockId, blo
       <div dir={isRtl ? 'rtl' : 'ltr'}>
         <Layout>
           <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-            {/* כותרת וכפתורים עליונים */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 <Button
                   variant="outlined"
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" paragraph>
+                      שינוי הסדר ישפיע על מיקום הבלוק ברשימת הלמידה. מספר נמוך יותר = מוצג קודם.
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 2 }}>
+                      <TextField
+                        label="סדר הצגה"
+                        type="number"
+                        value={blockOrder}
+                        onChange={(e) => setBlockOrder(parseInt(e.target.value) || 0)}
+                        size="small"
+                        fullWidth
+                      />
+                      <Button 
+                        variant="contained" 
+                        color="primary"
+                        onClick={handleSaveBlockOrder}
+                        startIcon={<SaveIcon />}
+                      >
+                        שמור סדר
+                      </Button>
+                    </Box>
+                  </CardContent>
+                </Card>
+                <Button 
+                  variant="contained" 
                   color="primary"
-                  startIcon={<ArrowBackIcon />}
-                  onClick={() => window.location.href = '/admin'}
+                  startIcon={isRtl ? <SaveIcon /> : null}
+                  endIcon={!isRtl ? <SaveIcon /> : null}
+                  onClick={() => onSave && onSave(questions)}
+                  disabled={questions.length === 0}
                 >
-                  חזרה לדף הניהול
+                  שמור מבחן
                 </Button>
-                <Typography variant="h4">
-                  {blockTitle ? `עריכת מבחן: ${blockTitle}` : 'עורך מבחנים'}
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => setIsRtl(!isRtl)}
-                  sx={{ mr: 2 }}
-                  startIcon={isRtl ? <TranslateIcon /> : null}
-                  endIcon={!isRtl ? <TranslateIcon /> : null}
-                >
-                  {isRtl ? 'English' : 'עברית'}
-                </Button>
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <Button 
-                    variant="outlined" 
-                    startIcon={isRtl ? <DownloadIcon /> : null}
-                    endIcon={!isRtl ? <DownloadIcon /> : null}
-                    onClick={handleExportQuestions}
-                    disabled={questions.length === 0}
-                  >
-                    ייצא שאלות
-                  </Button>
-                  <Button 
-                    variant="outlined" 
-                    startIcon={isRtl ? <UploadIcon /> : null}
-                    endIcon={!isRtl ? <UploadIcon /> : null}
-                    component="label"
-                  >
-                    ייבא שאלות
-                    <input
-                      type="file"
-                      accept=".json"
-                      hidden
-                      onChange={handleImportQuestions}
-                    />
-                  </Button>
-                  <Button 
-                    variant="contained" 
-                    color="primary"
-                    startIcon={isRtl ? <SaveIcon /> : null}
-                    endIcon={!isRtl ? <SaveIcon /> : null}
-                    onClick={() => onSave && onSave(questions)}
-                    disabled={questions.length === 0}
-                  >
-                    שמור מבחן
-                  </Button>
-                </Box>
               </Box>
             </Box>
             
@@ -409,9 +375,109 @@ export default function QuizEditor({ initialQuestions = [], onSave, blockId, blo
                 </Box>
               </CardContent>
             </Card>
+          </Box>
+          
+          <Box sx={{ display: 'flex', gap: 3, height: 'calc(100vh - 200px)' }}>
+            {/* רשימת שאלות */}
+            <Paper 
+              sx={{ 
+                width: '30%', 
+                overflow: 'auto',
+                p: 2,
+                textAlign: isRtl ? 'right' : 'left'
+              }}
+            >
+              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                <Typography variant="h6">
+                  שאלות ({questions.length})
+                </Typography>
+                <Button 
+                  startIcon={isRtl ? <AddIcon /> : null}
+                  endIcon={!isRtl ? <AddIcon /> : null}
+                  onClick={handleAdd} 
+                  variant="outlined"
+                  size="small"
+                >
+                  הוסף שאלה
+                </Button>
+              </Box>
+              
+              <List>
+                {questions.map((q, idx) => (
+                  <ListItem 
+                    key={idx} 
+                    selected={selectedIdx === idx} 
+                    button 
+                    onClick={() => handleSelect(idx)}
+                    sx={{ 
+                      borderRadius: 1,
+                      mb: 1,
+                      border: '1px solid',
+                      borderColor: selectedIdx === idx ? 'primary.main' : 'divider'
+                    }}
+                    onClick={handleExportQuestions}
+                    disabled={questions.length === 0}
+                  >
+                    ייצא שאלות
+                  </Button>
+                  <Button 
+                    variant="outlined" 
+                    startIcon={isRtl ? <UploadIcon /> : null}
+                    endIcon={!isRtl ? <UploadIcon /> : null}
+                    component="label"
+                  >
+                    ייבא שאלות
+                    <input
+                      type="file"
+                      accept=".json"
+                      hidden
+                      onChange={handleImportQuestions}
+                    />
+                  </Button>
+                  {/* סדר הצגת הבלוק */}
+                  <Card sx={{ mb: 2, boxShadow: 3 }}>
+                    <CardContent>
+                      <Typography variant="h6" color="primary" gutterBottom>
+                        סדר הצגת הבלוק בדף הלמידה
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" paragraph>
+                        שינוי הסדר ישפיע על מיקום הבלוק ברשימת הלמידה. מספר נמוך יותר = מוצג קודם.
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 2 }}>
+                        <TextField
+                          label="סדר הצגה"
+                          type="number"
+                          value={blockOrder}
+                          onChange={(e) => setBlockOrder(parseInt(e.target.value) || 0)}
+                          size="small"
+                          fullWidth
+                        />
+                        <Button 
+                          variant="contained" 
+                          color="primary"
+                          onClick={handleSaveBlockOrder}
+                          startIcon={<SaveIcon />}
+                        >
+                          שמור סדר
+                        </Button>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                  <Button 
+                    variant="contained" 
+                    color="primary"
+                    startIcon={isRtl ? <SaveIcon /> : null}
+                    endIcon={!isRtl ? <SaveIcon /> : null}
+                    onClick={() => onSave && onSave(questions)}
+                    disabled={questions.length === 0}
+                  >
+                    שמור מבחן
+                  </Button>
+                </Box>
+              </Box>
+            </Box>
             
-            {/* אזור תוכן המבחן */}
-            <Box sx={{ display: 'flex', gap: 3, height: 'calc(100vh - 300px)' }}>
+            <Box sx={{ display: 'flex', gap: 3, height: 'calc(100vh - 200px)' }}>
               {/* רשימת שאלות */}
               <Paper 
                 sx={{ 
@@ -450,42 +516,41 @@ export default function QuizEditor({ initialQuestions = [], onSave, blockId, blo
                         borderColor: selectedIdx === idx ? 'primary.main' : 'divider'
                       }}
                     >
-                      <ListItemText 
-                        primary={`${idx + 1}. ${q.text.substring(0, 50)}${q.text.length > 50 ? '...' : ''}`}
+                      <ListItemText
+                        primary={
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Chip 
+                              size="small" 
+                              label={`${idx + 1}`} 
+                              color="primary" 
+                              sx={{ mr: 1, minWidth: '30px' }} 
+                            />
+                            <Typography noWrap>
+                              {q.text.substring(0, 40) + (q.text.length > 40 ? '...' : '')}
+                            </Typography>
+                          </Box>
+                        }
                         secondary={`${q.options.length} אפשרויות`}
                       />
                       <ListItemSecondaryAction>
                         <Tooltip title="העבר למעלה">
-                          <span>
-                            <IconButton 
-                              edge="end" 
-                              onClick={(e) => { e.stopPropagation(); handleMove(idx, -1); }}
-                              disabled={idx === 0}
-                              size="small"
-                            >
-                              <ArrowUpIcon />
-                            </IconButton>
-                          </span>
-                        </Tooltip>
-                        <Tooltip title="העבר למטה">
-                          <span>
-                            <IconButton 
-                              edge="end" 
-                              onClick={(e) => { e.stopPropagation(); handleMove(idx, 1); }}
-                              disabled={idx === questions.length - 1}
-                              size="small"
-                            >
-                              <ArrowDownIcon />
-                            </IconButton>
-                          </span>
-                        </Tooltip>
-                        <Tooltip title="שכפל שאלה">
                           <IconButton 
                             edge="end" 
-                            onClick={(e) => { e.stopPropagation(); handleDuplicate(); }}
+                            onClick={(e) => { e.stopPropagation(); handleMove(idx, -1); }} 
+                            disabled={idx === 0}
                             size="small"
                           >
-                            <DuplicateIcon />
+                            <ArrowUpIcon />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="העבר למטה">
+                          <IconButton 
+                            edge="end" 
+                            onClick={(e) => { e.stopPropagation(); handleMove(idx, 1); }} 
+                            disabled={idx === questions.length-1}
+                            size="small"
+                          >
+                            <ArrowDownIcon />
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="מחק שאלה">
@@ -493,6 +558,7 @@ export default function QuizEditor({ initialQuestions = [], onSave, blockId, blo
                             edge="end" 
                             onClick={(e) => { e.stopPropagation(); handleDelete(idx); }}
                             size="small"
+                            color="error"
                           >
                             <DeleteIcon />
                           </IconButton>
@@ -500,155 +566,164 @@ export default function QuizEditor({ initialQuestions = [], onSave, blockId, blo
                       </ListItemSecondaryAction>
                     </ListItem>
                   ))}
+                  
+                  {questions.length === 0 && (
+                    <Alert severity="info" sx={{ mt: 2 }}>
+                      אין שאלות במבחן. לחץ על "הוסף שאלה" כדי להתחיל.
+                    </Alert>
+                  )}
                 </List>
-                
-                {questions.length === 0 && (
-                  <Box sx={{ textAlign: 'center', mt: 4, color: 'text.secondary' }}>
-                    <Typography variant="body2" gutterBottom>
-                      אין שאלות במבחן
-                    </Typography>
-                    <Button 
-                      variant="outlined" 
-                      startIcon={isRtl ? <AddIcon /> : null}
-                      endIcon={!isRtl ? <AddIcon /> : null}
-                      onClick={handleAdd}
-                      sx={{ mt: 1 }}
-                    >
-                      הוסף שאלה ראשונה
-                    </Button>
-                  </Box>
-                )}
               </Paper>
               
               {/* עורך שאלה */}
               <Paper 
                 sx={{ 
-                  width: '70%', 
-                  overflow: 'auto',
+                  flex: 1, 
                   p: 2,
+                  overflow: 'auto',
                   textAlign: isRtl ? 'right' : 'left'
                 }}
               >
-                {selectedIdx !== null || (selectedIdx === null && editForm.text) ? (
+                {selectedIdx !== null || activeTab === 0 ? (
                   <>
                     <Tabs 
                       value={activeTab} 
-                      onChange={(_, newValue) => setActiveTab(newValue)}
+                      onChange={(e, newValue) => setActiveTab(newValue)}
                       sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}
                     >
-                      <Tab 
-                        icon={<EditIcon />} 
-                        label="עריכה" 
-                        iconPosition={isRtl ? "start" : "end"}
-                      />
-                      <Tab 
-                        icon={<PreviewIcon />} 
-                        label="תצוגה מקדימה" 
-                        iconPosition={isRtl ? "start" : "end"}
-                      />
+                      <Tab label="עריכה" />
+                      <Tab label="תצוגה מקדימה" disabled={!editForm.text} />
                     </Tabs>
                     
                     {activeTab === 0 ? (
-                      <Box>
+                      // לשונית עריכה
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Typography variant="h6">
+                            {selectedIdx !== null ? `עריכת שאלה #${selectedIdx + 1}` : 'שאלה חדשה'}
+                          </Typography>
+                          <Box>
+                            {selectedIdx !== null && (
+                              <Tooltip title="שכפל שאלה">
+                                <IconButton onClick={handleDuplicate} sx={{ mr: 1 }}>
+                                  <DuplicateIcon />
+                                </IconButton>
+                              </Tooltip>
+                            )}
+                            <Button 
+                              variant="contained" 
+                              color="primary"
+                              startIcon={isRtl ? <SaveIcon /> : null}
+                              endIcon={!isRtl ? <SaveIcon /> : null}
+                              onClick={handleSaveQuestion}
+                            >
+                              שמור שאלה
+                            </Button>
+                          </Box>
+                        </Box>
+                        
                         <TextField
                           label="טקסט השאלה"
-                          value={editForm.text}
-                          onChange={(e) => handleFormChange('text', e.target.value)}
-                          fullWidth
                           multiline
                           rows={3}
+                          fullWidth
+                          value={editForm.text}
+                          onChange={(e) => handleFormChange('text', e.target.value)}
+                          placeholder="הזן את טקסט השאלה כאן..."
                           variant="outlined"
-                          sx={{ mb: 3 }}
+                          inputProps={{
+                            style: { direction: isRtl ? 'rtl' : 'ltr' }
+                          }}
                         />
                         
-                        <Typography variant="h6" gutterBottom>
-                          אפשרויות תשובה
-                          <Tooltip title="התשובה הנכונה מסומנת בכחול">
-                            <IconButton size="small" sx={{ ml: 1 }}>
-                              <HelpIcon fontSize="small" />
-                            </IconButton>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
+                          <Typography variant="subtitle1">
+                            אפשרויות תשובה
+                          </Typography>
+                          <Tooltip title="בחר את התשובה הנכונה באמצעות הרדיו בוטון">
+                            <HelpIcon color="info" fontSize="small" />
                           </Tooltip>
-                        </Typography>
+                        </Box>
                         
-                        {editForm.options.map((option, idx) => (
-                          <Box 
-                            key={idx} 
-                            sx={{ 
-                              display: 'flex', 
-                              mb: 2, 
-                              alignItems: 'center',
-                              bgcolor: editForm.correctAnswer === idx ? 'primary.light' : 'transparent',
-                              borderRadius: 1,
-                              p: 1
-                            }}
-                          >
-                            <Radio
-                              checked={editForm.correctAnswer === idx}
-                              onChange={() => handleFormChange('correctAnswer', idx)}
-                            />
-                            <TextField
-                              label={`אפשרות ${idx + 1}`}
-                              value={option}
-                              onChange={(e) => handleOptionChange(idx, e.target.value)}
-                              fullWidth
-                              variant="outlined"
-                              size="small"
-                            />
-                            <Tooltip title="הסר אפשרות">
-                              <span>
-                                <IconButton 
-                                  onClick={() => handleRemoveOption(idx)}
-                                  disabled={editForm.options.length <= 2}
-                                  size="small"
+                        <Paper variant="outlined" sx={{ p: 2 }}>
+                          <FormControl component="fieldset" fullWidth>
+                            <RadioGroup
+                              value={editForm.correctAnswer}
+                              onChange={(e) => handleFormChange('correctAnswer', Number(e.target.value))}
+                            >
+                              {editForm.options.map((option, index) => (
+                                <Box 
+                                  key={index} 
+                                  sx={{ 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    mb: 1,
+                                    p: 1,
+                                    borderRadius: 1,
+                                    bgcolor: editForm.correctAnswer === index ? 'rgba(46, 125, 50, 0.1)' : 'transparent'
+                                  }}
                                 >
-                                  <DeleteIcon />
-                                </IconButton>
-                              </span>
-                            </Tooltip>
-                          </Box>
-                        ))}
-                        
-                        <Button 
-                          startIcon={isRtl ? <AddIcon /> : null}
-                          endIcon={!isRtl ? <AddIcon /> : null}
-                          onClick={handleAddOption}
-                          sx={{ mb: 3 }}
-                        >
-                          הוסף אפשרות
-                        </Button>
-                        
+                                  <Box sx={{ display: 'flex', width: '100%', alignItems: 'center' }}>
+                                    <Radio 
+                                      checked={editForm.correctAnswer === index}
+                                      onChange={() => handleFormChange('correctAnswer', index)}
+                                      color={editForm.correctAnswer === index ? "success" : "primary"}
+                                      value={index}
+                                    />
+                                    <TextField
+                                      value={option}
+                                      onChange={(e) => handleOptionChange(index, e.target.value)}
+                                      placeholder={`אפשרות ${index + 1}`}
+                                      size="small"
+                                      fullWidth
+                                      variant="outlined"
+                                      sx={{ mx: 1 }}
+                                      inputProps={{
+                                        style: { direction: isRtl ? 'rtl' : 'ltr' }
+                                      }}
+                                    />
+                                  </Box>
+                                  <IconButton
+                                    onClick={() => handleRemoveOption(index)}
+                                    disabled={editForm.options.length <= 2}
+                                    color="error"
+                                    size="small"
+                                  >
+                                    <DeleteIcon />
+                                  </IconButton>
+                                </Box>
+                              ))}
+                            </RadioGroup>
+                          </FormControl>
+                          
+                          <Button
+                            startIcon={isRtl ? <AddIcon /> : null}
+                            endIcon={!isRtl ? <AddIcon /> : null}
+                            onClick={handleAddOption}
+                            sx={{ mt: 1 }}
+                            variant="outlined"
+                            size="small"
+                          >
+                            הוסף אפשרות
+                          </Button>
+                        </Paper>
+
                         <TextField
-                          label="הסבר (יוצג לאחר בחירת תשובה)"
-                          value={editForm.explanation}
-                          onChange={(e) => handleFormChange('explanation', e.target.value)}
-                          fullWidth
+                          label="הסבר (אופציונלי)"
                           multiline
                           rows={2}
+                          fullWidth
+                          value={editForm.explanation}
+                          onChange={(e) => handleFormChange('explanation', e.target.value)}
+                          placeholder="הסבר שיוצג למשתמש לאחר המענה על השאלה"
                           variant="outlined"
-                          sx={{ mt: 2, mb: 3 }}
+                          inputProps={{
+                            style: { direction: isRtl ? 'rtl' : 'ltr' }
+                          }}
                         />
-                        
-                        <Button 
-                          variant="contained" 
-                          color="primary"
-                          startIcon={isRtl ? <SaveIcon /> : null}
-                          endIcon={!isRtl ? <SaveIcon /> : null}
-                          onClick={handleSaveQuestion}
-                          sx={{ mr: 1 }}
-                        >
-                          שמור שאלה
-                        </Button>
-                        
-                        <Button 
-                          variant="outlined"
-                          startIcon={isRtl ? <PreviewIcon /> : null}
-                          endIcon={!isRtl ? <PreviewIcon /> : null}
-                          onClick={() => setActiveTab(1)}
-                        >
-                          תצוגה מקדימה
-                        </Button>
                       </Box>
                     ) : (
+                      // לשונית תצוגה מקדימה
                       <Box sx={{ mt: 2 }}>
                         <Card variant="outlined" sx={{ mb: 3 }}>
                           <CardContent>

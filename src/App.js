@@ -26,6 +26,7 @@ import SimulationPage from './pages/content/SimulationPage';
 import DocumentPage from './pages/content/DocumentPage';
 import AdminPage from './pages/AdminPage';
 import BlockEditorPage from './pages/admin/BlockEditorPage';
+import FeedbackPage from './pages/FeedbackPage';
 
 
 // Wrapper component for AnimatePresence
@@ -95,6 +96,7 @@ const AnimatedRoutes = () => {
             </ProtectedRoute>
           }
         />
+
         <Route
           path="/admin"
           element={
@@ -108,6 +110,14 @@ const AnimatedRoutes = () => {
           element={
             <AdminRoute>
               <BlockEditorPage />
+            </AdminRoute>
+          }
+        />
+        <Route
+          path="/feedback"
+          element={
+            <AdminRoute>
+              <FeedbackPage />
             </AdminRoute>
           }
         />

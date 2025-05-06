@@ -33,12 +33,14 @@ import {
   AccessTime as AccessTimeIcon,
   Language as LanguageIcon,
   EmojiEvents as AchievementIcon,
-  Grade as GradeIcon
+  Grade as GradeIcon,
+  Star as StarIcon
 } from '@mui/icons-material';
 import { useUser } from '../context/UserContext';
 import { db } from '../firebase/config';
 import { collection, query, where, getDocs, writeBatch, serverTimestamp, doc, getDoc } from 'firebase/firestore';
 import Layout from '../components/Layout';
+import RatingSystem from '../components/RatingSystem';
 
 function ProfilePage() {
   // הגדרת כיוון טקסט קבוע לעברית
@@ -760,6 +762,8 @@ function ProfilePage() {
                   </List>
                 </Box>
 
+                {/* Rating System - Added for feedback */}
+                <RatingSystem />
 
               </CardContent>
             </Card>

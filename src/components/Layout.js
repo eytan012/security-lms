@@ -18,8 +18,10 @@ import HomeIcon from '@mui/icons-material/Home';
 import SchoolIcon from '@mui/icons-material/School';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import ExitToAppIcon from '@mui/icons-material/ExitToApp';
+import FeedbackIcon from '@mui/icons-material/Feedback';
 import { useAuth } from '../hooks/useAuth';
 import { useUser } from '../context/UserContext';
+import backgroundImage from '../assets/backgrounds/bg-lms.jpeg';
 
 function Layout({ children }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -30,7 +32,10 @@ function Layout({ children }) {
 
   const menuItems = [
     // Add admin page for admin users
-    ...(user?.role === 'admin' ? [{ text: 'ניהול', icon: <BarChartIcon />, path: '/admin' }] : []),
+    ...(user?.role === 'admin' ? [
+      { text: 'ניהול', icon: <BarChartIcon />, path: '/admin' },
+      { text: 'משובים', icon: <FeedbackIcon />, path: '/feedback' }
+    ] : []),
     { text: 'פרופיל', icon: <HomeIcon />, path: '/progress' },
     { text: 'לומדה', icon: <SchoolIcon />, path: '/blocks' },
     { text: 'סטטיסטיקות', icon: <BarChartIcon />, path: '/statistics' }
@@ -47,7 +52,14 @@ function Layout({ children }) {
   };
 
   return (
-    <Box sx={{ display: 'flex' }} dir="rtl">
+    <Box 
+      sx={{ 
+        display: 'flex',
+        background: `url(${backgroundImage}) no-repeat center center fixed`,
+        backgroundSize: 'cover',
+        height: '100%',
+      }} 
+      dir="rtl">
       <AppBar position="fixed">
         <Toolbar sx={{ display: 'flex', justifyContent: 'space-between' }}>
           {/* Right side - Menu icon */}
@@ -197,7 +209,9 @@ function Layout({ children }) {
           flexGrow: 1,
           p: 3,
           mt: 8,
-          minHeight: '100vh'
+          minHeight: '100vh',
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          backdropFilter: 'blur(5px)',
         }}
       >
         <Toolbar />
